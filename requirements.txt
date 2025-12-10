@@ -1,6 +1,7 @@
 # CrewAI and Agent Framework
 #crewai==0.30.10
 crewai
+flask-cors
 
 crewai-tools==0.1.6
 

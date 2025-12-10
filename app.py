@@ -1,5 +1,6 @@
 import os
 import sys
+from flask_cors import CORS
 import json
 import re
 from pathlib import Path
@@ -32,6 +33,10 @@ except ImportError:
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app, origins=[
+    "https://nda-risk-analyzer.netlify.app",
+    "http://localhost:5000"  # For local testing
+])
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'docx', 'txt'}
