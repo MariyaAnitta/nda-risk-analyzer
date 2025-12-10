@@ -33,10 +33,19 @@ except ImportError:
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, origins=[
-    "https://nda-risk-analyzer.netlify.app",
-    "http://localhost:5000"  # For local testing
-])
+CORS(app, 
+     resources={r"/*": {
+         "origins": [
+             "https://nda-risk-analyzer.netlify.app",
+             "http://localhost:5000",
+             "http://localhost:3000"  # if you use React dev server
+         ],
+         "methods": ["GET", "POST", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization"],
+         "expose_headers": ["Content-Type"],
+         "supports_credentials": False  # Set to False for production
+     }})
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'docx', 'txt'}
