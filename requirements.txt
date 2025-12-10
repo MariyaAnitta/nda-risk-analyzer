@@ -1,5 +1,7 @@
 # CrewAI and Agent Framework
-crewai==0.30.10
+#crewai==0.30.10
+crewai
+
 crewai-tools==0.1.6
 
 # LangChain Core
