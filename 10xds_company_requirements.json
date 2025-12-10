@@ -1,0 +1,171 @@
+{
+  "metadata": {
+    "company": "10xds - Exponential Digital Solutions",
+    "industry": "Digital Transformation, AI/ML, BPO, Technology Solutions",
+    "last_updated": "2025-11-26",
+    "description": "Company-specific NDA requirements for vendor/partner agreements"
+  },
+  "critical_violations": {
+    "description": "Clauses that BLOCK signature - must not exist in NDA",
+    "blocking_clauses": [
+      {
+        "violation": "Unlimited Liability",
+        "patterns": [
+          "unlimited liability",
+          "liable for all damages without limit",
+          "no cap on liability"
+        ],
+        "severity": "BLOCKING",
+        "explanation": "10xds requires liability caps to manage risk exposure"
+      },
+      {
+        "violation": "Perpetual Confidentiality Without Exceptions",
+        "patterns": [
+          "confidentiality obligation shall survive indefinitely",
+          "perpetual non-disclosure without",
+          "no time limit on confidentiality"
+        ],
+        "severity": "BLOCKING",
+        "explanation": "Unreasonable perpetual obligations without standard exceptions are unacceptable"
+      },
+      {
+        "violation": "Automatic IP Transfer",
+        "patterns": [
+          "all intellectual property automatically transferred",
+          "vendor assigns all IP rights",
+          "work product belongs exclusively to disclosing party"
+        ],
+        "severity": "BLOCKING",
+        "explanation": "IP ownership must be explicitly negotiated, not automatic transfer"
+      },
+      {
+        "violation": "One-Sided Termination Restriction",
+        "patterns": [
+          "receiving party cannot terminate",
+          "only disclosing party may terminate",
+          "no termination right for receiving party"
+        ],
+        "severity": "BLOCKING",
+        "explanation": "10xds requires mutual termination rights"
+      }
+    ]
+  },
+  "mandatory_protections": {
+    "description": "Protections that MUST exist - flag HIGH if missing",
+    "required_clauses": [
+      {
+        "protection": "Data Protection & Privacy Clause",
+        "keywords": [
+          "data protection",
+          "personal data",
+          "GDPR",
+          "data privacy",
+          "data security measures"
+        ],
+        "severity": "HIGH",
+        "explanation": "As a digital solutions company handling client data, explicit data protection terms are mandatory"
+      },
+      
+      {
+        "protection": "Liability Cap",
+        "keywords": [
+          "liability limited to",
+          "maximum liability shall not exceed",
+          "liability cap"
+        ],
+        "severity": "HIGH",
+        "explanation": "Defined liability limits are essential for financial risk management"
+      },
+      {
+        "protection": "Termination Clause",
+        "keywords": [
+          "may terminate",
+          "termination upon notice",
+          "either party may terminate",
+          "termination for convenience"
+        ],
+        "severity": "HIGH",
+        "explanation": "Clear exit mechanism is required"
+      },
+      {
+        "protection": "Return/Destruction of Information",
+        "keywords": [
+          "return or destroy",
+          "return of confidential information",
+          "destruction upon termination"
+        ],
+        "severity": "MEDIUM",
+        "explanation": "Post-termination handling of confidential data"
+      }
+    ]
+  },
+  "preferred_terms": {
+    "description": "Preferred terms - flag LOW if not met (negotiable)",
+    "preferences": [
+      {
+        "term": "NDA Duration",
+        "preferred_value": "2-3 years",
+        "acceptable_range": "1-5 years",
+        "severity": "LOW",
+        "explanation": "Standard commercial practice for technology partnerships"
+      },
+      {
+        "term": "Confidentiality Period Post-Termination",
+        "preferred_value": "2-3 years after termination",
+        "acceptable_range": "1-5 years",
+        "severity": "LOW",
+        "explanation": "Reasonable post-termination confidentiality period"
+      },
+      {
+        "term": "Jurisdiction",
+        "preferred_value": "Indian courts",
+        "acceptable_alternatives": "Indian Arbitration, Major Indian metros",
+        "severity": "MEDIUM",
+        "explanation": "Preferred jurisdiction for ease of enforcement"
+      },
+      {
+        "term": "Governing Law",
+        "preferred_value": "Indian law",
+        "acceptable_alternatives": "Indian law with international arbitration",
+        "severity": "MEDIUM",
+        "explanation": "Ensures compliance with Indian Contract Act and local regulations"
+      }
+    ]
+  },
+  "industry_specific_requirements": {
+    "description": "Requirements specific to digital transformation and technology services",
+    "technology_clauses": [
+      {
+        "requirement": "Source Code Protection",
+        "importance": "HIGH",
+        "explanation": "NDAs must not require disclosure of proprietary source code or algorithms without escrow provisions"
+      },
+      {
+        "requirement": "Client Data Segregation",
+        "importance": "HIGH",
+        "explanation": "Multi-client service provider must ensure confidentiality obligations don't prevent serving other clients"
+      },
+      {
+        "requirement": "Subcontractor Provisions",
+        "importance": "MEDIUM",
+        "explanation": "Ability to engage subcontractors under confidentiality is important for BPO/delivery model"
+      }
+    ]
+  },
+  "approved_jurisdictions": {
+    "tier_1_preferred": ["Courts in India"],
+
+    "tier_2_acceptable": [
+      "Indian Arbitration (any major city)",
+      "Singapore International Arbitration (for international contracts)"
+    ],
+    "tier_3_negotiable": [
+      "London International Arbitration (high-value international deals)",
+      "UNCITRAL Arbitration with seat in India"
+    ],
+    "unacceptable": [
+      "Exclusive foreign jurisdiction with no Indian alternative",
+      "Jurisdictions with no reciprocal enforcement treaties with India"
+    ]
+  }
+}

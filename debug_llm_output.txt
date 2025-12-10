@@ -1,0 +1,179 @@
+=== LEGAL DOCUMENT RISK ASSESSMENT REPORT ===
+
+EXECUTIVE SUMMARY:
+The overall risk level of this agreement is MODERATE RISK (54%). The main concerns are the unlimited liability clause, overly broad definition of confidential information, and asymmetric obligations. It is recommended to negotiate the agreement to address these concerns.
+
+ HIDDEN & DISGUISED RISKS:
+**HIDDEN TRAP #1: Unlimited Liability**
+Name: Unlimited Liability
+Primary Clause: Clause 11
+Hidden Mechanism: Indemnification clause
+How It Works: Party 1 may be liable for costs, expenses, or damages incurred due to Company's violation of the Agreement.
+Real Meaning: Party 1 may face unlimited financial liability for Company's actions.
+Severity: CRITICAL
+Detection Method: Regex + LLM
+Confidence: 0.9
+
+**HIDDEN TRAP #2: Overly Broad Definition**
+Name: Overly Broad Definition
+Primary Clause: Clause 1
+Hidden Mechanism: Definition of Confidential Information
+How It Works: Confidential Information includes any information disclosed by one Party to the other, without limitation.
+Real Meaning: Party 1 may be obligated to protect a wide range of information, including non-confidential information.
+Severity: HIGH
+Detection Method: Definition Analysis
+Confidence: 0.8
+
+**HIDDEN TRAP #3: Asymmetric Obligations**
+Name: Asymmetric Obligations
+Primary Clause: Clause 2
+Hidden Mechanism: Receiving Party's obligation to refrain from disclosing Confidential Information
+How It Works: Party 1 has a stricter obligation to protect Confidential Information than Company.
+Real Meaning: Party 1 may face stricter confidentiality obligations than Company.
+Severity: MEDIUM
+Detection Method: Cross-Reference Analysis
+Confidence: 0.7
+
+Detection Summary:
+- Total Hidden Risks Found: 3
+- Regex Matches: 2 (LLM Confirmed: 2, False Positives: 0)
+- Definitional Traps: 1
+- Cross-Reference Traps: 1
+- Combined Risk Multipliers: None
+
+VENDOR & JURISDICTION INTELLIGENCE:
+Vendor Name: [Unknown]
+Vendor Location: [Unknown]
+Vendor Classification: [Unknown]
+Governing Law: Laws of India
+Jurisdiction: Exclusive jurisdiction of the Courts in Bangalore
+Compliance Level Required: MODERATE
+Jurisdiction Risks: Unknown vendor identity and location create a risk of unknown jurisdiction and compliance risks.
+
+INDIAN CONTRACT ACT COMPLIANCE:
+ Compliant Items:
+- Clause 1: Definition of Confidential Information
+- Clause 2: Receiving Party's obligation to refrain from disclosing Confidential Information
+- Clause 3: Parties' obligation to protect Confidential Information
+
+ Violations Found:
+- Clause 11: Unlimited liability clause (BLOCKING)
+- Clause 14: Post-employment non-compete clause (BLOCKING)
+
+ Risks Identified:
+- Clause 1: Overly broad definition of confidential information (HIGH)
+- Clause 2: Asymmetric obligations (MEDIUM)
+
+10XDS COMPANY POLICY COMPLIANCE:
+ Blocking Violations:
+- Clause 14: Post-employment non-compete clause (BLOCKING)
+
+ Missing Mandatory Protections:
+- Data protection and privacy clause (HIGH)
+- IP ownership clarity clause (HIGH)
+- Liability cap clause (HIGH)
+
+ Preference Gaps:
+- NDA duration (MEDIUM)
+- Confidentiality period post-termination (MEDIUM)
+- Jurisdiction and governing law (MEDIUM)
+
+UNIVERSAL NDA CRITERIA ASSESSMENT:
+Protections Found: 3 out of 10
+Protections Missing: 7 out of 10
+- Data protection and privacy clause
+- IP ownership clarity clause
+- Liability cap clause
+- NDA duration
+- Confidentiality period post-termination
+- Jurisdiction and governing law
+- Governing law clause
+
+OVERALL RISK ASSESSMENT:
+Risk Score: 108 points
+Risk Percentage: 54%
+Risk Level: MODERATE RISK
+
+Category Breakdown:
+- Hidden Risks: 3
+- Indian Law Compliance: 2
+- Company Policy Compliance: 3
+- Universal Criteria: 7
+- Jurisdiction Risks: 1
+
+RECOMMENDATION:
+NEGOTIATE FIRST
+The agreement contains several critical and high-risk issues that need to be addressed. It is recommended to negotiate the agreement to revise the unlimited liability clause, overly broad definition of confidential information, and asymmetric obligations.
+
+RECOMMENDED COUNTER-PROPOSALS:
+---PROPOSAL START---
+Name: Post-Employment Non-Compete Revision
+Priority: BLOCKING
+Issue: The non-compete clause may be unenforceable and create undue hardship on the employee.
+Clause: The non-compete obligation shall not apply after the termination of this Agreement, and the parties agree that any such obligation shall be limited to the duration of the Agreement. The parties further agree that the non-compete obligation shall not be enforced in a manner that would unreasonably restrict the employee's ability to earn a living.
+Benefit: Ensures the non-compete clause is reasonable and enforceable, reducing the risk of litigation and undue hardship on the employee.
+---PROPOSAL END---
+
+---PROPOSAL START---
+Name: Unreasonable Trade Restraint Revision
+Priority: BLOCKING
+Issue: The trade restraint obligation may be overly broad and unenforceable.
+Clause: The trade restraint obligation shall be limited to a reasonable duration and scope, and the parties agree that any such obligation shall not be enforced in a manner that would unreasonably restrict the employee's ability to engage in lawful business activities.
+Benefit: Ensures the trade restraint obligation is reasonable and enforceable, reducing the risk of litigation and undue hardship on the employee.
+---PROPOSAL END---
+
+---PROPOSAL START---
+Name: Unlimited Liability Revision
+Priority: CRITICAL
+Issue: The unlimited liability clause may expose 10xds to excessive damages.
+Clause: The liability of each party shall be limited to the amount of damages that are directly attributable to the breach of this Agreement, and in no event shall either party be liable for consequential, incidental, or punitive damages.
+Benefit: Limits the liability of each party, reducing the risk of excessive damages and promoting a more balanced risk allocation.
+---PROPOSAL END---
+
+---PROPOSAL START---
+Name: Overly Broad Definition Revision
+Priority: HIGH
+Issue: The definition of confidential information may be overly broad and capture non-confidential information.
+Clause: The definition of confidential information shall be limited to information that is marked as confidential or that a reasonable person would understand to be confidential, and shall not include information that is publicly available or lawfully obtained from a third party.
+Benefit: Ensures that the definition of confidential information is reasonable and limited to truly confidential information, reducing the risk of disputes and litigation.
+---PROPOSAL END---
+
+---PROPOSAL START---
+Name: Asymmetric Obligations Revision
+Priority: HIGH
+Issue: The obligations of the parties may be asymmetric and unfair.
+Clause: The parties agree that their obligations under this Agreement shall be mutual and reciprocal, and that each party shall be bound by the same obligations and standards of confidentiality.
+Benefit: Ensures that the obligations of the parties are mutual and reciprocal, promoting a more balanced and fair agreement.
+---PROPOSAL END---
+
+---PROPOSAL START---
+Name: Jurisdiction and Governing Law Clause
+Priority: MEDIUM
+Issue: The agreement specifies Indian jurisdiction, but may create a risk of foreign jurisdiction being applied in certain circumstances.
+Clause: This Agreement shall be governed by and construed in accordance with the laws of India, and the parties agree to submit to the exclusive jurisdiction of the courts in Bangalore, India, for any action or proceeding regarding this Agreement.
+Benefit: Clarifies the governing law and jurisdiction, reducing the risk of disputes and litigation.
+---PROPOSAL END---
+
+---PROPOSAL START---
+Name: Data Protection and Privacy Clause
+Priority: HIGH
+Issue: The agreement lacks a data protection and privacy clause, exposing 10xds to GDPR and Indian data law violations.
+Clause: Each party shall comply with all applicable data protection laws and regulations, including but not limited to the Information Technology Act, 2000 and the Personal Data Protection Bill, in connection with any personal data processed under this Agreement. The Receiving Party shall implement and maintain appropriate technical and organizational measures to protect such personal data against unauthorized or unlawful processing and against accidental loss, destruction, damage, alteration, or disclosure. Both parties agree to notify each other within 24 hours of any data breach or suspected breach.
+Benefit: Ensures legal compliance with Indian and international data protection laws and limits liability exposure.
+---PROPOSAL END---
+
+---PROPOSAL START---
+Name: IP Ownership Clarity Clause
+Priority: HIGH
+Issue: The agreement lacks clarity on IP ownership, creating a risk of disputes and litigation.
+Clause: All intellectual property rights in and to the confidential information and any materials developed under this Agreement shall remain the property of the Disclosing Party, and the Receiving Party shall not acquire any rights or interests in such intellectual property.
+Benefit: Clarifies IP ownership, reducing the risk of disputes and litigation.
+---PROPOSAL END---
+
+---PROPOSAL START---
+Name: Liability Cap Clause
+Priority: HIGH
+Issue: The agreement lacks a liability cap, exposing 10xds to excessive damages.
+Clause: The liability of each party shall be limited to the amount of damages that are directly attributable to the breach of this Agreement, and in no event shall either party be liable for damages exceeding the amount of [insert amount].
+Benefit: Limits the liability of each party, reducing the risk of excessive damages and promoting a more balanced risk allocation.
+---PROPOSAL END---

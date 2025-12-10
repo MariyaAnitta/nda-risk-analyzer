@@ -1,0 +1,110 @@
+{
+  "metadata": {
+    "version": "2.0",
+    "last_updated": "2025-11-25",
+    "description": "Top 10 Critical NDA Criteria - Universal standards for 95% of NDAs worldwide",
+    "total_criteria": 10
+  },
+
+  "universal_nda_criteria": [
+    {
+      "id": "UNC-001",
+      "category": "Definition of Confidential Information",
+      "criterion": "clear_confidentiality_definition",
+      "priority": "CRITICAL",
+      "description": "Confidential Information must be clearly defined with scope, inclusions, and explicit exclusions (public info, prior knowledge, independent development)",
+      "check_for": "Clear definition with exclusions clause (public domain, rightfully possessed, independently developed)",
+      "red_flag": "Vague definitions like 'any information' without exclusions, or overly broad scope"
+    },
+    
+    {
+      "id": "UNC-002",
+      "category": "Purpose and Use Limitation",
+      "criterion": "purpose_restriction",
+      "priority": "CRITICAL",
+      "description": "Information can only be used for the specified purpose stated in the NDA, not for any other purpose",
+      "check_for": "Explicit 'Purpose' clause limiting use to stated business objective",
+      "red_flag": "No purpose stated, or purpose too vague like 'any business purpose'"
+    },
+
+    {
+      "id": "UNC-003",
+      "category": "Non-Disclosure Obligation",
+      "criterion": "non_disclosure_duty",
+      "priority": "CRITICAL",
+      "description": "Receiving party must not disclose confidential information to third parties except authorized personnel on need-to-know basis",
+      "check_for": "Clear prohibition on disclosure plus need-to-know exception for employees/advisors bound by confidentiality",
+      "red_flag": "Allows disclosure to 'affiliates' or 'partners' without binding them to confidentiality"
+    },
+
+    {
+      "id": "UNC-004",
+      "category": "Term and Survival",
+      "criterion": "confidentiality_duration",
+      "priority": "CRITICAL",
+      "description": "Duration of confidentiality obligation must be specified (typically 2-5 years for commercial NDAs, perpetual for trade secrets)",
+      "check_for": "Specific time period like '3 years from disclosure date' or '5 years after agreement termination'",
+      "red_flag": "Perpetual confidentiality for non-trade-secret info, or undefined duration"
+    },
+
+    {
+      "id": "UNC-005",
+      "category": "Return or Destruction of Information",
+      "criterion": "return_or_destroy",
+      "priority": "CRITICAL",
+      "description": "Upon termination or request, receiving party must return or certify destruction of all confidential materials",
+      "check_for": "Obligation to return or destroy within specific timeframe plus written certification requirement",
+      "red_flag": "No return or destruction clause, or allows retention of copies indefinitely"
+    },
+
+    {
+      "id": "UNC-006",
+      "category": "No Obligation to Disclose",
+      "criterion": "no_disclosure_obligation",
+      "priority": "CRITICAL",
+      "description": "NDA does not obligate either party to disclose information or enter into further agreements",
+      "check_for": "Explicit 'no obligation' clause stating parties are free to not share info or transact",
+      "red_flag": "Implies or requires disclosure of certain information or commits to future deals"
+    },
+
+    {
+      "id": "UNC-007",
+      "category": "Intellectual Property Rights",
+      "criterion": "no_ip_transfer",
+      "priority": "CRITICAL",
+      "description": "Disclosure of confidential information does not grant license, transfer ownership, or convey any IP rights",
+      "check_for": "'No license' clause explicitly stating IP remains with disclosing party",
+      "red_flag": "Implies license grant, joint IP ownership, or ambiguous IP rights language"
+    },
+
+    {
+      "id": "UNC-008",
+      "category": "Remedies and Injunctive Relief",
+      "criterion": "injunctive_relief_right",
+      "priority": "CRITICAL",
+      "description": "Breach may cause irreparable harm and disclosing party has right to seek injunctive relief without proving damages",
+      "check_for": "Acknowledgment of irreparable harm plus right to injunctive or equitable relief in addition to damages",
+      "red_flag": "Limits remedies to damages only, or requires proof of harm before injunction"
+    },
+
+    {
+      "id": "UNC-009",
+      "category": "Governing Law and Jurisdiction",
+      "criterion": "clear_jurisdiction",
+      "priority": "CRITICAL",
+      "description": "Governing law and dispute resolution forum (court jurisdiction or arbitration) must be clearly specified",
+      "check_for": "Specific governing law and exclusive jurisdiction clause",
+      "red_flag": "Foreign jurisdiction disadvantageous to you, or vague jurisdiction like 'mutually agreed'"
+    },
+
+    {
+      "id": "UNC-010",
+      "category": "Mutual vs Unilateral NDA",
+      "criterion": "party_obligations_clarity",
+      "priority": "CRITICAL",
+      "description": "Clear identification whether NDA is mutual (both parties share info) or unilateral (only one party discloses), with corresponding obligations",
+      "check_for": "Explicit statement of mutual or unilateral nature with matching confidentiality obligations",
+      "red_flag": "Ambiguous party obligations or one-sided obligations in supposedly mutual NDA"
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "metadata": {
+    "source": "Indian Contract Act, 1872",
+    "last_updated": "2025-11-26",
+    "description": "Legal compliance rules for NDA validation under Indian law"
+  },
+  "section_10_essentials": {
+    "description": "Essential elements for valid contract formation",
+    "required_elements": [
+      {
+        "element": "Free Consent",
+        "keywords": ["mutual agreement", "consent", "parties agree", "both parties"],
+        "severity": "CRITICAL",
+        "explanation": "Agreement must show willing consent without coercion, fraud, or misrepresentation"
+      },
+      {
+        "element": "Lawful Consideration",
+        "keywords": ["consideration", "in consideration of", "payment", "exchange"],
+        "severity": "CRITICAL",
+        "explanation": "Agreement must have valid consideration (can be mutual promises)"
+      },
+      {
+        "element": "Competent Parties",
+        "keywords": ["authorized signatory", "duly authorized", "competent to contract"],
+        "severity": "HIGH",
+        "explanation": "Parties must be legally competent to enter contract"
+      },
+      {
+        "element": "Lawful Object",
+        "keywords": ["lawful purpose", "legitimate business"],
+        "severity": "CRITICAL",
+        "explanation": "Purpose of NDA must be lawful and not against public policy"
+      }
+    ]
+  },
+  "section_27_restraints": {
+    "description": "Prohibition of agreements in restraint of trade",
+    "prohibited_clauses": [
+      {
+        "violation": "Post-Employment Non-Compete",
+        "prohibited_patterns": [
+          "shall not engage in similar business after termination",
+          "prohibited from joining competitor for",
+          "restricted from working in same industry after",
+          "non-compete period after employment"
+        ],
+        "severity": "BLOCKING",
+        "explanation": "Section 27 makes post-termination non-compete clauses void and unenforceable in India",
+        "exception": "During employment restrictions are valid; only post-termination is void"
+      },
+      {
+        "violation": "Unreasonable Trade Restraint",
+        "prohibited_patterns": [
+          "permanently prohibited from",
+          "indefinite restriction on business",
+          "absolute prohibition on trade"
+        ],
+        "severity": "BLOCKING",
+        "explanation": "Absolute or indefinite trade restrictions violate Section 27"
+      }
+    ],
+    "valid_restrictions": [
+      "Confidentiality obligations during and after employment",
+      "Non-solicitation of clients (reasonable duration)",
+      "Trade secret protection (reasonable scope)",
+      "Non-disclosure of proprietary information"
+    ]
+  },
+  "section_73_74_breach_remedies": {
+    "description": "Compensation for breach of contract",
+    "guidelines": [
+      {
+        "principle": "Reasonable Liquidated Damages",
+        "check": "liquidated_damages_reasonable",
+        "severity": "MEDIUM",
+        "explanation": "Liquidated damages should be genuine pre-estimate, not penalty. Excessive amounts may be reduced by court."
+      },
+      {
+        "principle": "No Penalty Clauses",
+        "prohibited_patterns": [
+          "penalty of",
+          "punitive damages exceeding",
+          "forfeiture of all"
+        ],
+        "severity": "HIGH",
+        "explanation": "Indian courts distinguish liquidated damages from penalties. Penalties are unenforceable."
+      }
+    ]
+  },
+  "jurisdiction_requirements": {
+    "description": "Jurisdiction and governing law considerations",
+    "indian_company_requirements": [
+      {
+        "requirement": "Indian Jurisdiction Presence",
+        "acceptable_jurisdictions": [
+          "Courts in India",
+          "Indian Arbitration",
+          "Delhi courts",
+          "Mumbai courts",
+          "Bangalore courts",
+          "Kerala courts"
+        ],
+        "severity": "HIGH",
+        "explanation": "For Indian companies, having Indian jurisdiction ensures enforceability"
+      },
+      {
+        "requirement": "Foreign Jurisdiction Risk",
+        "risk_jurisdictions": [
+          "exclusive jurisdiction in [foreign country]",
+          "subject to laws of [non-Indian jurisdiction] only"
+        ],
+        "severity": "MEDIUM",
+        "risk_explanation": "Foreign-only jurisdiction creates enforcement challenges for Indian company"
+      }
+    ]
+  }
+}

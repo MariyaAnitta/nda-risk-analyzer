@@ -1,0 +1,70 @@
+{
+  "metadata": {
+    "description": "Jurisdiction intelligence for international NDA analysis",
+    "last_updated": "2025-11-26"
+  },
+  "country_classifications": {
+    "indian_domestic": {
+      "countries": ["India", "IN"],
+      "legal_framework": "indian_contract_act_strict",
+      "governing_law_required": "Indian law",
+      "jurisdiction_required": "Indian courts or Indian arbitration",
+      "compliance_level": "STRICT"
+    },
+    "international_tier1": {
+      "countries": ["Singapore", "SG", "United Kingdom", "UK", "United States", "US", "Canada", "CA", "Australia", "AU"],
+      "legal_framework": "indian_contract_act_moderate",
+      "governing_law_acceptable": ["Indian law", "Singapore law", "English law", "New York law with Indian arbitration option"],
+      "jurisdiction_acceptable": ["Indian arbitration", "Singapore International Arbitration", "ICC Arbitration with Indian seat"],
+      "compliance_level": "MODERATE",
+      "explanation": "Major trading partners with reciprocal enforcement treaties"
+    },
+    "international_tier2": {
+      "countries": ["Germany", "DE", "France", "FR", "Netherlands", "NL", "Japan", "JP", "UAE", "AE"],
+      "legal_framework": "indian_contract_act_basic",
+      "governing_law_acceptable": ["Indian law preferred", "Local law with Indian arbitration clause"],
+      "jurisdiction_acceptable": ["Indian arbitration mandatory", "International arbitration with Indian seat option"],
+      "compliance_level": "BASIC",
+      "explanation": "Established business jurisdictions requiring arbitration provisions"
+    },
+    "high_risk_jurisdictions": {
+      "countries": ["China", "CN", "Russia", "RU"],
+      "legal_framework": "indian_contract_act_basic",
+      "governing_law_acceptable": ["Indian law only"],
+      "jurisdiction_acceptable": ["Indian arbitration mandatory"],
+      "compliance_level": "BASIC",
+      "special_requirements": ["Enhanced IP protection clauses", "Data residency provisions"],
+      "explanation": "Enforcement challenges - require strict Indian jurisdiction"
+    }
+  },
+  "jurisdiction_risk_patterns": {
+    "high_risk": [
+      "exclusive jurisdiction in [foreign country] courts",
+      "subject only to the laws of [foreign country]",
+      "no right to bring action in Indian courts"
+    ],
+    "medium_risk": [
+      "arbitration in [foreign city] without Indian seat option",
+      "foreign law governing without Indian Contract Act compliance"
+    ],
+    "acceptable": [
+      "arbitration in India",
+      "courts in India shall have jurisdiction",
+      "Indian law shall govern",
+      "Singapore arbitration with Indian law governing"
+    ]
+  },
+  "vendor_location_extraction": {
+    "patterns_to_extract": [
+      "vendor registered in",
+      "party located at",
+      "address:",
+      "having its principal place of business at",
+      "registered office at"
+    ],
+    "country_indicators": [
+      "India", "Singapore", "USA", "United States", "UK", "United Kingdom",
+      "Canada", "Australia", "Germany", "France", "UAE", "Dubai", "China"
+    ]
+  }
+}

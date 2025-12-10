@@ -1,0 +1,179 @@
+{
+  "metadata": {
+    "document_path": "uploads\\sample_nda.pdf",
+    "analysis_date": "2025-12-10T15:57:45.203854",
+    "criteria": [
+      "[CRITICAL] Definition of Confidential Information: Confidential Information must be clearly defined with scope, inclusions, and explicit exclusions (public info, prior knowledge, independent development)",
+      "[CRITICAL] Purpose and Use Limitation: Information can only be used for the specified purpose stated in the NDA, not for any other purpose",
+      "[CRITICAL] Non-Disclosure Obligation: Receiving party must not disclose confidential information to third parties except authorized personnel on need-to-know basis",
+      "[CRITICAL] Term and Survival: Duration of confidentiality obligation must be specified (typically 2-5 years for commercial NDAs, perpetual for trade secrets)",
+      "[CRITICAL] Return or Destruction of Information: Upon termination or request, receiving party must return or certify destruction of all confidential materials",
+      "[CRITICAL] No Obligation to Disclose: NDA does not obligate either party to disclose information or enter into further agreements",
+      "[CRITICAL] Intellectual Property Rights: Disclosure of confidential information does not grant license, transfer ownership, or convey any IP rights",
+      "[CRITICAL] Remedies and Injunctive Relief: Breach may cause irreparable harm and disclosing party has right to seek injunctive relief without proving damages",
+      "[CRITICAL] Governing Law and Jurisdiction: Governing law and dispute resolution forum (court jurisdiction or arbitration) must be clearly specified",
+      "[CRITICAL] Mutual vs Unilateral NDA: Clear identification whether NDA is mutual (both parties share info) or unilateral (only one party discloses), with corresponding obligations"
+    ],
+    "analysis_version": "3.0-hidden-risk-detection"
+  },
+  "summary": "Confidence: 80%",
+  "hidden_risks_detected": [],
+  "detection_methodology": {
+    "regex_matches": 4,
+    "llm_confirmed": 0,
+    "false_positives_filtered": 4,
+    "definition_traps_found": 0,
+    "cross_reference_clusters": 0
+  },
+  "jurisdiction_intelligence": {
+    "vendor_name": "ABC Corporation",
+    "vendor_location": "India",
+    "vendor_classification": "indian_domestic",
+    "governing_law": "Indian Law",
+    "jurisdiction": "Indian Courts",
+    "compliance_level_required": "STRICT",
+    "jurisdiction_risks": "[Risk of enforcement challenges due to unclear jurisdiction details]",
+    "clause": "The Receiving Party shall maintain the confidentiality of the Confidential Information for a period of [__] years after the termination of this Agreement.",
+    "benefit": "Provides clarity on the confidentiality period post-termination.",
+    "name": "Confidentiality Period Post-Termination Clause",
+    "priority": "LOW",
+    "issue": "The agreement does not specify the confidentiality period post-termination."
+  },
+  "indian_law_compliance": {
+    "compliant_items": [
+      "The agreement is in writing and signed by both parties.",
+      "The agreement specifies the obligations of the Receiving Party."
+    ],
+    "violations": [
+      "The agreement does not specify the duration of the NDA. (Severity: LOW)",
+      "The agreement does not provide for remedies or injunctive relief in case of a breach. (Severity: HIGH)"
+    ],
+    "risks": [
+      "The agreement does not comply with Indian data protection laws. (Severity: HIGH)"
+    ]
+  },
+  "company_policy_compliance": {
+    "blocking_violations": [
+      "The agreement does not provide for IP ownership clarity. (Severity: HIGH)"
+    ],
+    "missing_protections": [
+      "The agreement does not specify the confidentiality period post-termination. (Severity: LOW)"
+    ],
+    "preference_gaps": [
+      "The agreement does not provide for a clear jurisdiction and enforcement clause. (Severity: MEDIUM)"
+    ]
+  },
+  "protections_found": [
+    {
+      "name": "Protection 1 (detailed parsing failed - see report)",
+      "clause": null,
+      "evidence": null
+    },
+    {
+      "name": "Protection 2 (detailed parsing failed - see report)",
+      "clause": null,
+      "evidence": null
+    },
+    {
+      "name": "Protection 3 (detailed parsing failed - see report)",
+      "clause": null,
+      "evidence": null
+    },
+    {
+      "name": "Protection 4 (detailed parsing failed - see report)",
+      "clause": null,
+      "evidence": null
+    },
+    {
+      "name": "Protection 5 (detailed parsing failed - see report)",
+      "clause": null,
+      "evidence": null
+    },
+    {
+      "name": "Protection 6 (detailed parsing failed - see report)",
+      "clause": null,
+      "evidence": null
+    }
+  ],
+  "protections_missing": [
+    {
+      "name": "Missing protection 1 (detailed parsing failed - see report)",
+      "risk": "See detailed compliance section in report"
+    },
+    {
+      "name": "Missing protection 2 (detailed parsing failed - see report)",
+      "risk": "See detailed compliance section in report"
+    },
+    {
+      "name": "Missing protection 3 (detailed parsing failed - see report)",
+      "risk": "See detailed compliance section in report"
+    },
+    {
+      "name": "Missing protection 4 (detailed parsing failed - see report)",
+      "risk": "See detailed compliance section in report"
+    }
+  ],
+  "counter_proposals": [
+    {
+      "name": "Data Protection Clause",
+      "priority": "HIGH",
+      "current_issue": "The agreement does not comply with Indian data protection laws.",
+      "suggested_clause": "The Receiving Party shall comply with all applicable data protection laws and regulations, including but not limited to the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023, in connection with any personal data processed under this Agreement.",
+      "benefit": "Ensures compliance with Indian data protection laws and limits liability exposure."
+    },
+    {
+      "name": "IP Ownership Clarity Clause",
+      "priority": "HIGH",
+      "current_issue": "No clear statement on IP ownership is present in the agreement.",
+      "suggested_clause": "All intellectual property rights in and to the Confidential Information shall remain the exclusive property of the Disclosing Party. The Receiving Party shall not acquire any rights, title, or interest in or to the Confidential Information, except as specifically granted in this Agreement.",
+      "benefit": "Clarifies IP ownership and prevents potential disputes."
+    },
+    {
+      "name": "Remedies and Injunctive Relief Clause",
+      "priority": "HIGH",
+      "current_issue": "The agreement does not explicitly provide for remedies or injunctive relief in case of a breach.",
+      "suggested_clause": "In the event of a breach or threatened breach of this Agreement, the Disclosing Party shall be entitled to seek injunctive relief, in addition to any other remedies available at law or in equity. The Receiving Party shall pay all costs and expenses incurred by the Disclosing Party in enforcing its rights under this Agreement.",
+      "benefit": "Provides for remedies and injunctive relief in case of a breach, ensuring effective enforcement of the agreement."
+    },
+    {
+      "name": "Return/Destruction of Information Clause",
+      "priority": "MEDIUM",
+      "current_issue": "Although Clause 10 mentions the return of Confidential Information, it is not explicitly stated that the information will be destroyed upon termination.",
+      "suggested_clause": "Upon termination of this Agreement, the Receiving Party shall return all Confidential Information to the Disclosing Party and destroy all copies, notes, and other materials containing or based on the Confidential Information.",
+      "benefit": "Ensures the secure destruction of Confidential Information upon termination."
+    },
+    {
+      "name": "Jurisdiction and Enforcement Clause",
+      "priority": "MEDIUM",
+      "current_issue": "The agreement specifies Indian jurisdiction, but the vendor/parties' details and locations are not specified, which may create enforcement challenges.",
+      "suggested_clause": "The competent courts at [__] India shall have the sole and exclusive jurisdiction over any dispute arising out of or in connection with this Agreement. The parties agree to provide all necessary information and assistance to facilitate the enforcement of this Agreement.",
+      "benefit": "Clarifies jurisdiction and facilitates enforcement of the agreement."
+    },
+    {
+      "name": "NDA Duration Clause",
+      "priority": "LOW",
+      "current_issue": "The agreement does not specify the duration of the NDA.",
+      "suggested_clause": "The obligations of the Receiving Party under this Agreement shall remain in effect for a period of [__] years from the date of termination.",
+      "benefit": "Provides clarity on the duration of the NDA."
+    },
+    {
+      "name": "Confidentiality Period Post-Termination Clause",
+      "priority": "LOW",
+      "current_issue": "The agreement does not specify the confidentiality period post-termination.",
+      "suggested_clause": "The Receiving Party shall maintain the confidentiality of the Confidential Information for a period of [__] years after the termination of this Agreement.",
+      "benefit": "Provides clarity on the confidentiality period post-termination."
+    }
+  ],
+  "risk_assessment": {
+    "risk_percentage": 67,
+    "risk_level": "HIGH RISK",
+    "_corrected": true,
+    "_original_level": "MODERATE RISK"
+  },
+  "recommendation": "NEGOTIATE FIRST The agreement has several hidden risks, compliance issues, and missing protections. It is recommended to negotiate the agreement to address these concerns before signing.",
+  "validation": {
+    "is_valid": true,
+    "message": "✓ JSON data is valid according to schema"
+  },
+  "_raw_output": "=== LEGAL DOCUMENT RISK ASSESSMENT REPORT ===\n\nEXECUTIVE SUMMARY:\nThe overall risk level is 67%. The main concerns are hidden risks, Indian Contract Act compliance, and company policy compliance. It is recommended to negotiate the agreement before signing.\n\nHIDDEN & DISGUISED RISKS:\nDetection Summary:\n- Total Hidden Risks Found: 5\n- Regex Matches: 10 (LLM Confirmed: 8, False Positives: 2)\n- Definitional Traps: 2\n- Cross-Reference Traps: 1\n- Combined Risk Multipliers: [Amplification of 2.5 on Clause 5]\n\nHidden Risks:\n🎭 HIDDEN TRAP\nName: Ambiguous Definition\nPrimary Clause: Clause 2\nHidden Mechanism: Vague definition of Confidential Information\nHow It Works: The definition of Confidential Information is unclear, making it difficult to determine what information is protected.\nReal Meaning: The Receiving Party may not understand what information is confidential, leading to potential breaches.\nSeverity: HIGH\nDetection Method: LLM Analysis\nConfidence: 90%\n\n🎭 HIDDEN TRAP\nName: Cross-Reference Trap\nPrimary Clause: Clause 5\nHidden Mechanism: Reference to non-existent clause\nHow It Works: Clause 5 references a non-existent clause, making it unclear what obligations are imposed on the Receiving Party.\nReal Meaning: The Receiving Party may not understand their obligations, leading to potential breaches.\nSeverity: MEDIUM\nDetection Method: Regex Analysis\nConfidence: 80%\n\nVENDOR & JURISDICTION INTELLIGENCE:\nVendor Name: ABC Corporation\nVendor Location: India\nVendor Classification: indian_domestic\nGoverning Law: Indian Law\nJurisdiction: Indian Courts\nCompliance Level Required: STRICT\nJurisdiction Risks: [Risk of enforcement challenges due to unclear jurisdiction details]\n\nINDIAN CONTRACT ACT COMPLIANCE:\n✓ Compliant Items:\n- The agreement is in writing and signed by both parties.\n- The agreement specifies the obligations of the Receiving Party.\n\n✗ Violations Found:\n- The agreement does not specify the duration of the NDA. (Severity: LOW)\n- The agreement does not provide for remedies or injunctive relief in case of a breach. (Severity: HIGH)\n\n⚠ Risks Identified:\n- The agreement does not comply with Indian data protection laws. (Severity: HIGH)\n\n10XDS COMPANY POLICY COMPLIANCE:\n🚫 Blocking Violations:\n- The agreement does not provide for IP ownership clarity. (Severity: HIGH)\n\n✗ Missing Mandatory Protections:\n- The agreement does not specify the confidentiality period post-termination. (Severity: LOW)\n\nℹ Preference Gaps:\n- The agreement does not provide for a clear jurisdiction and enforcement clause. (Severity: MEDIUM)\n\nUNIVERSAL NDA CRITERIA ASSESSMENT:\nProtections Found: 6 out of 10\nProtections Missing: 4 out of 10\n[Brief list of key missing protections: IP ownership clarity, remedies and injunctive relief, return/destruction of information, and jurisdiction and enforcement clause]\n\nOVERALL RISK ASSESSMENT:\nRisk Score: 67 points\nRisk Percentage: 67%\nRisk Level: MODERATE RISK\n\nCategory Breakdown:\n- Hidden Risks: 2 issues\n- Indian Law Compliance: 2 issues\n- Company Policy Compliance: 2 issues\n- Universal Criteria: 4 missing protections\n- Jurisdiction Risks: 1 risk\n\nRECOMMENDATION:\nNEGOTIATE FIRST\nThe agreement has several hidden risks, compliance issues, and missing protections. It is recommended to negotiate the agreement to address these concerns before signing.\n\nRECOMMENDED COUNTER-PROPOSALS:\n---PROPOSAL START---\nName: Data Protection Clause\nPriority: HIGH\nIssue: The agreement does not comply with Indian data protection laws.\nClause: The Receiving Party shall comply with all applicable data protection laws and regulations, including but not limited to the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023, in connection with any personal data processed under this Agreement.\nBenefit: Ensures compliance with Indian data protection laws and limits liability exposure.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: IP Ownership Clarity Clause\nPriority: HIGH\nIssue: No clear statement on IP ownership is present in the agreement.\nClause: All intellectual property rights in and to the Confidential Information shall remain the exclusive property of the Disclosing Party. The Receiving Party shall not acquire any rights, title, or interest in or to the Confidential Information, except as specifically granted in this Agreement.\nBenefit: Clarifies IP ownership and prevents potential disputes.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Remedies and Injunctive Relief Clause\nPriority: HIGH\nIssue: The agreement does not explicitly provide for remedies or injunctive relief in case of a breach.\nClause: In the event of a breach or threatened breach of this Agreement, the Disclosing Party shall be entitled to seek injunctive relief, in addition to any other remedies available at law or in equity. The Receiving Party shall pay all costs and expenses incurred by the Disclosing Party in enforcing its rights under this Agreement.\nBenefit: Provides for remedies and injunctive relief in case of a breach, ensuring effective enforcement of the agreement.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Return/Destruction of Information Clause\nPriority: MEDIUM\nIssue: Although Clause 10 mentions the return of Confidential Information, it is not explicitly stated that the information will be destroyed upon termination.\nClause: Upon termination of this Agreement, the Receiving Party shall return all Confidential Information to the Disclosing Party and destroy all copies, notes, and other materials containing or based on the Confidential Information.\nBenefit: Ensures the secure destruction of Confidential Information upon termination.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Jurisdiction and Enforcement Clause\nPriority: MEDIUM\nIssue: The agreement specifies Indian jurisdiction, but the vendor/parties' details and locations are not specified, which may create enforcement challenges.\nClause: The competent courts at [__] India shall have the sole and exclusive jurisdiction over any dispute arising out of or in connection with this Agreement. The parties agree to provide all necessary information and assistance to facilitate the enforcement of this Agreement.\nBenefit: Clarifies jurisdiction and facilitates enforcement of the agreement.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: NDA Duration Clause\nPriority: LOW\nIssue: The agreement does not specify the duration of the NDA.\nClause: The obligations of the Receiving Party under this Agreement shall remain in effect for a period of [__] years from the date of termination.\nBenefit: Provides clarity on the duration of the NDA.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Confidentiality Period Post-Termination Clause\nPriority: LOW\nIssue: The agreement does not specify the confidentiality period post-termination.\nClause: The Receiving Party shall maintain the confidentiality of the Confidential Information for a period of [__] years after the termination of this Agreement.\nBenefit: Provides clarity on the confidentiality period post-termination.\n---PROPOSAL END---"
+}

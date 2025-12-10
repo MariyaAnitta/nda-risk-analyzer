@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Legal Risk Analyzer</title>
+    <style>
+        /* ----------------- Reset & base ----------------- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html,body { height: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, Arial;
+            background: #f5f7fa;
+            color: #1a202c;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+            line-height: 1.6;
+        }
+        /* ---------- Results area ---------- */
+.results-header {
+    background: white;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 20px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.results-header-left h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f1724;
+    margin-bottom: 4px;
+}
+
+.results-header-left p {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.back-btn, .export-btn {
+    padding: 10px 20px;
+    background: white;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.back-btn:hover, .export-btn:hover {
+    background: #f7fafc;
+    border-color: #a0aec0;
+}
+
+/* ---------- Loader ---------- */
+.loader {
+    display: none;
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e6eef6;
+    margin-top: 30px;
+}
+
+.loader.active {
+    display: block;
+}
+
+.spinner {
+    border: 3px solid #f3f4f6;
+    border-top: 3px solid #0f1724;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+}
+
+.loader-text {
+    font-size: 14px;
+    color: #2b3b4a;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.loader-subtext {
+    font-size: 13px;
+    color: #64748b;
+}
+
+/* ---------- Error message ---------- */
+.error-message {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    font-size: 14px;
+    display: none;
+}
+
+.error-message.active {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+        /* ---------- Header ---------- */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e6eef6;
+            padding: 20px 40px;
+            box-shadow: 0 1px 3px rgba(13, 20, 25, 0.04);
+        }
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display:flex;
+            align-items:center;
+            gap:14px;
+        }
+        .logo {
+            width:44px;height:44px;border-radius:10px;
+            background:#0f1724;color:white;
+            display:flex;align-items:center;justify-content:center;
+            font-weight:700;font-size:16px;
+        }
+        .header-title h1 { font-size:18px; font-weight:600; color:#0f1724; }
+        .header-title p { font-size:13px; color:#64748b; margin-top:2px; }
+
+        /* ---------- Container ---------- */
+        .container {
+            max-width:1400px;
+            margin: 0 auto;
+            padding:40px;
+        }
+
+        .page-title h2 { font-size:26px; font-weight:700; color:#0f1724; margin-bottom:6px; }
+        .page-subtitle { color:#64748b; margin-bottom:24px; font-size:14px; }
+
+        /* ---------- Grid ---------- */
+        .upload-grid {
+            display:grid;
+            grid-template-columns: 1fr 1fr;
+            gap:28px;
+            margin-bottom:30px;
+        }
+
+        .card {
+            background:white;
+            border-radius:12px;
+            border:1px solid #e6eef6;
+            padding:28px;
+            box-shadow: 0 1px 3px rgba(13,20,25,0.03);
+        }
+
+        .card-title { display:flex; align-items:center; gap:10px; font-weight:600; color:#0f1724; margin-bottom:6px; font-size:15px; }
+        .card-subtitle { font-size:13px; color:#64748b; margin-bottom:12px; }
+
+        /* ---------- Drop zone ---------- */
+        .drop-zone {
+            border:2px dashed #d3dce7;
+            border-radius:10px;
+            padding:56px 20px;
+            text-align:center;
+            cursor:pointer;
+            background:#fbfdff;
+            transition: all .15s ease;
+        }
+        .drop-zone:hover { border-color:#94b6e6; background:#f7fbff; }
+        .drop-zone.drag-over { border-color:#2b8de6; background:#ebf6ff; }
+        .upload-icon { width:48px;height:48px;margin:0 auto 14px;color:#9aa7b8; }
+        .drop-zone-text { font-size:15px; color:#2b3b4a; margin-bottom:6px; }
+        .drop-zone-subtext { font-size:13px; color:#6b7b88; }
+
+        .file-selected { margin-top:14px; display:none; background:#f0fdf4; border:1px solid #86efac; color:#166534; padding:10px 12px; border-radius:8px; font-size:13px; }
+
+        /* ---------- Form controls ---------- */
+        .form-group { margin-bottom:18px; }
+        label { display:block; font-weight:600; color:#0f1724; margin-bottom:8px; font-size:14px; }
+        select, textarea, input[type="text"] {
+            width:100%;
+            padding:12px 14px;
+            border-radius:8px;
+            border:1px solid #e6eef6;
+            background:#fbfdff;
+            font-size:14px;
+            font-family:inherit;
+            transition: all .12s ease;
+        }
+        select:focus, textarea:focus, input[type="text"]:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 6px rgba(59,130,246,0.06); background:#fff; }
+
+        .criteria-textarea { min-height:160px; resize:vertical; }
+
+        .criteria-helper { margin-top:10px; font-size:13px; color:#64748b; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+
+        /* ---------- Predefined criteria dropdown area ---------- */
+        .predefined-criteria { margin-top:18px; padding-top:12px; border-top:1px solid #eef5fb; }
+        .predefined-criteria-header { font-size:13px; color:#64748b; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
+        .criteria-dropdown {
+            padding:12px;border-radius:8px;border:1px solid #e6eef6;background:#f6fbff; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+        }
+        .criteria-options { margin-top:8px; background:white; border-radius:8px; border:1px solid #e6eef6; max-height:260px; overflow:auto; display:none; }
+        .criteria-options.active { display:block; }
+        .criteria-option { padding:10px 12px; border-bottom:1px solid #f3f7fb; display:flex; align-items:center; gap:10px; font-size:14px; cursor:pointer; }
+        .criteria-option:last-child { border-bottom:none; }
+        .criteria-option.selected { background:#4f46e5; color:white; }
+        .criteria-option .opt-label { flex:1; }
+        .selected-count { display:inline-block; margin-left:8px; padding:3px 9px; background:#4f46e5; color:white; border-radius:12px; font-size:12px; font-weight:700; }
+
+        /* Select all option styling */
+        .select-all-option { font-weight:700; border-bottom:1px solid #e6eef6; background:#f8fbff; }
+
+        /* ---------- Analyze button ---------- */
+        .analyze-btn { margin-top:10px; width:100%; padding:14px; border-radius:10px; border:none; background:#0f1724; color:white; font-weight:700; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; }
+        .analyze-btn:disabled { background:#cbd5e0; cursor:not-allowed; }
+
+        /* ---------- Process steps ---------- */
+        .process-steps { margin-top:36px; display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+        .step { text-align:center; }
+        .step-number { width:40px;height:40px;border-radius:50%; background:#f1f5f9; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#475569; margin-bottom:10px; }
+        .step-title { font-weight:700; color:#0f1724; margin-bottom:6px; }
+        .step-desc { color:#64748b; font-size:13px; }
+
+        /* ---------- Modal (for editing 10 default criteria) ---------- */
+        .modal-backdrop { position:fixed; inset:0; background:rgba(2,6,23,0.45); display:flex; align-items:center; justify-content:center; z-index:9999; }
+        .modal { width:760px; max-width:95%; background:white; border-radius:12px; padding:20px; box-shadow:0 10px 40px rgba(2,6,23,0.25); }
+        .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+        .modal-title { font-weight:700; color:#0f1724; font-size:16px; }
+        .modal-body { max-height:420px; overflow:auto; padding-right:6px; }
+        .criteria-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
+        .criteria-row input[type="text"] { flex:1; padding:10px; border:1px solid #e6eef6; border-radius:8px; font-size:14px; }
+        .criteria-row .row-actions { display:flex; gap:8px; }
+        .btn { padding:8px 12px; border-radius:8px; border:1px solid #e6eef6; cursor:pointer; background:white; }
+        .btn.primary { background:#0f1724; color:white; border-color:#0f1724; }
+        .btn.ghost { background:white; color:#0f1724; }
+
+        /* ---------- Results area kept as-is placeholder (real content from fakeindex.html injected below) ---------- */
+        .results-section { display:none; }
+        .results-section.active { display:block; }
+
+        /* ---------- small screens ---------- */
+        @media (max-width: 1024px) {
+            .upload-grid { grid-template-columns: 1fr; }
+            .process-steps { grid-template-columns: repeat(2,1fr); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">LR</div>
+            <div class="header-title">
+                <h1>Legal Risk Analyzer</h1>
+                <p>AI-Powered NDA Assessment</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload / Landing view -->
+    <div id="uploadView">
+        <div class="container">
+            <div class="page-title">
+                <h2>NDA Risk Assessment</h2>
+            </div>
+            <p class="page-subtitle">Upload your NDA document and let our AI identify risks, missing protections, and generate counter-proposals.</p>
+
+            <form id="analyzeForm">
+                <div class="upload-grid">
+
+                    <!-- Left: Upload card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                Upload NDA Document
+                            </div>
+                            <p class="card-subtitle">Upload your NDA for comprehensive risk analysis</p>
+                        </div>
+
+                        <div class="drop-zone" id="dropZone" title="Click to upload">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <div class="drop-zone-text">Drop your file here or click to browse</div>
+                            <div class="drop-zone-subtext">PDF, DOCX, or TXT (up to 20MB)</div>
+                            <input type="file" id="fileInput" class="file-input" name="document" accept=".pdf,.docx,.txt" />
+                        </div>
+                        <div id="fileName" class="file-selected"></div>
+                    </div>
+                    <!-- Right: Criteria card -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg>
+                                Risk Assessment Criteria
+                            </div>
+                            <p class="card-subtitle">Configure the criteria used to analyze your NDA</p>
+                        </div>
+
+                        <!-- Document Category -->
+                        <div class="form-group">
+                            <label for="documentCategory">Document Category</label>
+                            <select id="documentCategory">
+                                <option value="">Select document type...</option>
+                                <option value="nda">NDA Document</option>
+                                <option value="employment">Employee Contract</option>
+                            </select>
+                        </div>
+
+                        <!-- Additional Custom Criteria (textarea) -->
+                        <div style="margin-bottom:12px;">
+                            <label for="criteria">Additional Custom Criteria (Optional)</label>
+                            <textarea id="criteria" class="criteria-textarea" placeholder="Add your own criteria, one per line. Example:
+- Non-disparagement clause must be present
+- Force majeure events clearly defined
+- Right to audit vendor premises"></textarea>
+
+                            <div class="criteria-helper">
+                                <span id="charCount">0 characters</span>
+                                <!-- Blue box / Preview (this triggers modal) -->
+                                <button id="previewDefaultBtn" type="button" class="btn" style="display:flex; align-items:center; gap:8px; border-radius:8px; background:#e6f0ff; border:1px solid #cfe2ff;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#075985"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    <strong style="color:#075985;">10 Industry-Standard NDA Criteria Applied Automatically</strong>
+                                </button>
+                            </div>
+
+                            <div style="margin-top:10px; color:#64748b; font-size:13px;">
+                                <strong style="color:#10b981;">Automatic:</strong> 10 industry-standard criteria will be applied unless you override them in the modal.
+                            </div>
+                        </div>
+
+                        <!-- PREDEFINED (8 NDA items) - Dropdown -->
+                        <div class="predefined-criteria" id="predefinedCriteriaSection" style="display:none;">
+                            <div class="predefined-criteria-header">
+                                <div>Predefined Criteria</div>
+                                <div><span id="selectedCount" class="selected-count" style="display:none;">0</span></div>
+                            </div>
+
+                            <div id="criteriaDropdown" class="criteria-dropdown">
+                                <span id="criteriaDropdownLabel">Select criteria...</span>
+                                <span style="opacity:0.7;">â–¾</span>
+                            </div>
+
+                            <div id="criteriaOptions" class="criteria-options" aria-hidden="true">
+                                <!-- Options populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Hidden input to hold default criteria (10) separately -->
+                        <input type="hidden" id="defaultCriteriaInput" name="default_criteria" value="" />
+                    </div>
+                </div>
+
+                <!-- Analyze -->
+                <button type="submit" id="analyzeBtn" class="analyze-btn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    Analyze Document
+                </button>
+            </form>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <div class="loader-text">Analyzing Document</div>
+                <div class="loader-subtext">Please wait while we analyze your document..</div>
+            </div>
+
+            <div class="process-steps">
+                <div class="step">
+                    <div class="step-number">01</div>
+                    <div class="step-title">Upload</div>
+                    <div class="step-desc">Upload your NDA document (PDF, DOCX, TXT)</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">02</div>
+                    <div class="step-title">Configure</div>
+                    <div class="step-desc">Review default criteria or add custom ones</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">03</div>
+                    <div class="step-title">Analyze</div>
+                    <div class="step-desc">AI scans for risks and missing protections</div>
+                </div>
+                <div class="step">
+                    <div class="step-number">04</div>
+                    <div class="step-title">Review</div>
+                    <div class="step-desc">Get risk score, findings, and counter-proposals</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results section (will be filled by displayResults) - exact contents come from your fakeindex.html below -->
+    <div class="results-section" id="resultsSection">
+        <!-- Results are dynamically inserted by JS -->
+    </div>
+
+    <!-- Modal for editing default 10 industry criteria -->
+    <div id="defaultModalBackdrop" class="modal-backdrop" style="display:none;">
+        <div class="modal" role="dialog" aria-modal="true">
+            <div class="modal-header">
+                <div class="modal-title">Edit Industry-Standard NDA Criteria</div>
+                <div><button id="modalClose" class="btn">âœ•</button></div>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+
+            <div style="display:flex; justify-content:space-between; margin-top:14px;">
+                <div><button id="addDefaultRow" class="btn" type="button">+ Add New</button></div>
+                <div style="display:flex; gap:8px;">
+                    <button id="modalCancel" class="btn">Cancel</button>
+                    <button id="modalSave" class="btn primary">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /*******************************
+         * DATA
+         *******************************/
+        const predefinedCriteria = {
+            nda: [
+                "Clear definition of confidential information",
+                "Reasonable time limitations for confidentiality obligations",
+                "Permitted disclosure exceptions (legal, regulatory)",
+                "Return or destruction of confidential materials clause",
+                "No automatic non-compete or non-solicitation obligations",
+                "Mutual confidentiality obligations",
+                "Limited liability for inadvertent disclosure",
+                "Clear termination and survival clauses"
+            ],
+            employment: [
+                "Clear job description and responsibilities",
+                "Specified working hours and overtime policy",
+                "Competitive salary and benefits package",
+                "Paid time off and leave policies",
+                "Termination notice period and severance terms",
+                "Non-compete clause is reasonable in scope and duration",
+                "Intellectual property rights are clearly defined",
+                "Dispute resolution and arbitration clauses"
+            ]
+        };
+
+        // Default 10 industry-standard NDA criteria (editable via modal)
+        let defaultIndustryCriteria = [
+            "Party identification and contact details",
+            "Clear definition of confidential information",
+            "Purpose limitation for disclosed information",
+            "Obligations of confidentiality and restrictions on use",
+            "Permitted disclosure exceptions (e.g. legal, regulatory)",
+            "Return or destruction of confidential materials clause",
+            "Term/duration of confidentiality obligation",
+            "Intellectual property rights and ownership provisions",
+            "Liability limitations and remedies for breach",
+            "Governing law and jurisdiction clause"
+        ];
+
+        /*******************************
+         * DOM Elements & State
+         *******************************/
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const analyzeForm = document.getElementById('analyzeForm');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loader = document.getElementById('loader');
+        const resultsSection = document.getElementById('resultsSection');
+        const errorMessage = document.getElementById('errorMessage');
+        const uploadView = document.getElementById('uploadView');
+        const criteriaTextarea = document.getElementById('criteria');
+        const charCount = document.getElementById('charCount');
+        const documentCategory = document.getElementById('documentCategory');
+        const predefinedCriteriaSection = document.getElementById('predefinedCriteriaSection');
+        const criteriaDropdown = document.getElementById('criteriaDropdown');
+        const criteriaDropdownLabel = document.getElementById('criteriaDropdownLabel');
+        const criteriaOptions = document.getElementById('criteriaOptions');
+        const selectedCount = document.getElementById('selectedCount');
+        const previewDefaultBtn = document.getElementById('previewDefaultBtn');
+        const defaultCriteriaInput = document.getElementById('defaultCriteriaInput');
+
+        // Modal DOM
+        const defaultModalBackdrop = document.getElementById('defaultModalBackdrop');
+        const modalBody = document.getElementById('modalBody');
+        const modalClose = document.getElementById('modalClose');
+        const modalCancel = document.getElementById('modalCancel');
+        const modalSave = document.getElementById('modalSave');
+        const addDefaultRowBtn = document.getElementById('addDefaultRow');
+
+        let selectedPredefinedCriteria = new Set();
+        /*******************************
+         * Initialization & Helpers
+         *******************************/
+        function syncDefaultCriteriaInput() {
+            defaultCriteriaInput.value = defaultIndustryCriteria.join('\n');
+        }
+        syncDefaultCriteriaInput();
+
+        criteriaTextarea.addEventListener('input', () => {
+            charCount.textContent = `${criteriaTextarea.value.length} characters`;
+        });
+
+        // Document category change
+        documentCategory.addEventListener('change', (e) => {
+            const category = e.target.value;
+            selectedPredefinedCriteria.clear();
+
+            if (category && predefinedCriteria[category]) {
+                predefinedCriteriaSection.style.display = 'block';
+                populatePredefinedCriteria(category);
+                updateSelectedCount();
+            } else {
+                predefinedCriteriaSection.style.display = 'none';
+                criteriaOptions.innerHTML = '';
+                criteriaOptions.classList.remove('active');
+                criteriaDropdownLabel.textContent = 'Select criteria...';
+            }
+        });
+
+        // Drop zone interactions
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length) {
+                fileInput.files = files;
+                displayFileName(files[0].name);
+            }
+        });
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) displayFileName(e.target.files[0].name);
+        });
+
+        function displayFileName(name) {
+            fileName.textContent = `Selected: ${name}`;
+            fileName.style.display = 'block';
+        }
+
+        function showError(message) {
+            errorMessage.innerHTML = message;
+            errorMessage.style.display = 'flex';
+            setTimeout(()=> errorMessage.style.display = 'none', 5500);
+        }
+
+        /*******************************
+         * Predefined criteria dropdown functions
+         *******************************/
+        criteriaDropdown.addEventListener('click', (e) => {
+            e.stopPropagation();
+            criteriaOptions.classList.toggle('active');
+        });
+        document.addEventListener('click', (e) => {
+            if (!predefinedCriteriaSection.contains(e.target)) {
+                criteriaOptions.classList.remove('active');
+            }
+        });
+
+        function populatePredefinedCriteria(category) {
+            criteriaOptions.innerHTML = '';
+            const criteriaList = predefinedCriteria[category] || [];
+
+            // Select all option
+            const selectAll = document.createElement('div');
+            selectAll.className = 'criteria-option select-all-option';
+            selectAll.textContent = 'Select All Criteria';
+            selectAll.addEventListener('click', (ev) => {
+                ev.stopPropagation();
+                const allSelected = criteriaList.every(c => selectedPredefinedCriteria.has(c));
+                if (allSelected) {
+                    criteriaList.forEach(c => selectedPredefinedCriteria.delete(c));
+                    document.querySelectorAll('.criteria-option[data-val]').forEach(opt => opt.classList.remove('selected'));
+                    selectAll.textContent = ' Select All Criteria';
+                } else {
+                    criteriaList.forEach(c => selectedPredefinedCriteria.add(c));
+                    document.querySelectorAll('.criteria-option[data-val]').forEach(opt => opt.classList.add('selected'));
+                    selectAll.textContent = 'âœ— Deselect All Criteria';
+                }
+                updateSelectedCount();
+            });
+            criteriaOptions.appendChild(selectAll);
+
+            // Individual options
+            criteriaList.forEach(crit => {
+                const opt = document.createElement('div');
+                opt.className = 'criteria-option';
+                opt.dataset.val = crit;
+
+                const label = document.createElement('div');
+                label.className = 'opt-label';
+                label.textContent = crit;
+
+                const tick = document.createElement('div');
+                tick.style.minWidth = '24px';
+                tick.style.textAlign = 'right';
+                tick.innerHTML = '';
+
+                opt.appendChild(label);
+                opt.appendChild(tick);
+
+                opt.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleCriterion(crit, opt);
+                });
+
+                criteriaOptions.appendChild(opt);
+            });
+
+            criteriaDropdownLabel.textContent = 'Select criteria...';
+        }
+
+        function toggleCriterion(criterion, optionElement) {
+            if (selectedPredefinedCriteria.has(criterion)) {
+                selectedPredefinedCriteria.delete(criterion);
+                optionElement.classList.remove('selected');
+            } else {
+                selectedPredefinedCriteria.add(criterion);
+                optionElement.classList.add('selected');
+            }
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const count = selectedPredefinedCriteria.size;
+            if (count > 0) {
+                selectedCount.textContent = count;
+                selectedCount.style.display = 'inline-block';
+                criteriaDropdownLabel.textContent = `${count} criteria selected`;
+            } else {
+                selectedCount.style.display = 'none';
+                criteriaDropdownLabel.textContent = 'Select criteria...';
+            }
+        }
+
+        /*******************************
+         * Analyze form submission
+         *******************************/
+        analyzeForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const file = fileInput.files[0];
+            const customCriteriaText = criteriaTextarea.value.trim();
+
+            if (!file) {
+                showError('Please upload a document');
+                return;
+            }
+
+            // Build lists
+            const customList = customCriteriaText ? customCriteriaText.split('\n').map(x => x.trim()).filter(Boolean) : [];
+            const selectedPredefinedArray = Array.from(selectedPredefinedCriteria || []);
+
+            // Create form data
+            const formData = new FormData();
+            formData.append('document', file);
+
+            // Append selected predefined and custom criteria as 'criteria' if present
+            const combined = [...selectedPredefinedArray, ...customList];
+            if (combined.length > 0) {
+                formData.append('criteria', combined.join('\n'));
+            }
+
+            // Append the default industry criteria separately
+            formData.append('default_criteria', defaultIndustryCriteria.join('\n'));
+
+            analyzeBtn.disabled = true;
+            loader.classList.add('active');
+            resultsSection.classList.remove('active');
+            errorMessage.style.display = 'none';
+
+            try {
+                const resp = await fetch('/analyze', { method: 'POST', body: formData });
+                const data = await resp.json();
+
+                if (!resp.ok) throw new Error(data.error || 'Analysis failed');
+
+                displayResults(data);
+                uploadView.style.display = 'none';
+                resultsSection.classList.add('active');
+                window.scrollTo(0,0);
+            } catch (err) {
+                console.error(err);
+                showError(err.message || 'Analysis failed');
+            } finally {
+                analyzeBtn.disabled = false;
+                loader.classList.remove('active');
+            }
+        });
+
+        /*******************************
+         * Modal: edit the 10 industry-default criteria
+         *******************************/
+        previewDefaultBtn.addEventListener('click', openDefaultModal);
+        modalClose.addEventListener('click', closeDefaultModal);
+        modalCancel.addEventListener('click', closeDefaultModal);
+        modalSave.addEventListener('click', saveDefaultModal);
+        addDefaultRowBtn.addEventListener('click', addDefaultRow);
+
+        function openDefaultModal() {
+            renderModalRows();
+            defaultModalBackdrop.style.display = 'flex';
+        }
+        function closeDefaultModal() {
+            defaultModalBackdrop.style.display = 'none';
+        }
+
+        function renderModalRows() {
+            modalBody.innerHTML = '';
+            defaultIndustryCriteria.forEach((crit, idx) => {
+                const row = createCriteriaRow(crit, idx);
+                modalBody.appendChild(row);
+            });
+        }
+
+        function createCriteriaRow(text, idx) {
+            const row = document.createElement('div');
+            row.className = 'criteria-row';
+            row.dataset.index = idx;
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = true;
+            cb.style.width = '18px'; cb.style.height = '18px';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = text;
+
+            const actions = document.createElement('div');
+            actions.className = 'row-actions';
+
+            const del = document.createElement('button');
+            del.type = 'button';
+            del.className = 'btn';
+            del.textContent = 'Delete';
+            del.addEventListener('click', () => {
+                const i = Number(row.dataset.index);
+                defaultIndustryCriteria.splice(i, 1);
+                renderModalRows();
+            });
+
+            actions.appendChild(del);
+
+            row.appendChild(cb);
+            row.appendChild(input);
+            row.appendChild(actions);
+
+            return row;
+        }
+
+        function addDefaultRow() {
+            defaultIndustryCriteria.push('New industry criteria...');
+            renderModalRows();
+            modalBody.scrollTop = modalBody.scrollHeight;
+        }
+
+        function saveDefaultModal() {
+    const rows = modalBody.querySelectorAll('.criteria-row');
+    const newList = [];
+    rows.forEach((r) => {
+        const txtInput = r.querySelector('input[type="text"]');
+        const chk = r.querySelector('input[type="checkbox"]');
+        const txt = txtInput ? txtInput.value.trim() : '';
+        if (chk && chk.checked && txt) {
+            newList.push(txt);
+        }
+    });
+
+    defaultIndustryCriteria = newList.length ? newList : [];
+    syncDefaultCriteriaInput();
+    closeDefaultModal();
+
+    previewDefaultBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#075985"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3" stroke-width="1.2"/></svg> <strong style="color:#075985;">{ ${defaultIndustryCriteria.length} default criteria }</strong>`;
+    setTimeout(() => {
+        previewDefaultBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#075985"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3" stroke-width="1.2"/></svg> <strong style="color:#075985;">10 Industry-Standard NDA Criteria Applied Automatically</strong>`;
+    }, 2000); // ← ADD THIS (closing brace, comma, time)
+} // ← ADD THIS (closing brace for function)
+
+// Keep default criteria input synced on load
+syncDefaultCriteriaInput();
+        /*******************************
+         * DISPLAY RESULTS (copied from your fakeindex.html)
+         * This function builds the entire results page exactly as in fakeindex.html
+         *******************************/
+        function displayResults(data) {
+            const riskLevel = data.risk_assessment?.risk_level || 'MODERATE';
+            const riskPercent = data.risk_assessment?.risk_percentage || 0;
+            const protectionsFound = data.risk_assessment?.protections_found || 0;
+            const protectionsMissing = data.risk_assessment?.protections_missing || 0;
+
+            const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            // Risk level styling
+            const riskColor = riskLevel === 'HIGH' ? '#dc2626' : riskLevel === 'MODERATE' ? '#f59e0b' : '#10b981';
+            const riskBg = riskLevel === 'HIGH' ? '#fef2f2' : riskLevel === 'MODERATE' ? '#fef3c7' : '#f0fdf4';
+
+            // Safe helper function to check for [Not Specified]
+            const isNotSpecified = (value) => {
+                return !value || value === '[Not Specified]' || (typeof value === 'string' && value.includes('[Not Specified]'));
+            };
+
+            let html = `
+        <div class="results-header">
+            <div class="results-header-left">
+                <h3>Risk Assessment Report</h3>
+                <p>Generated on ${date}</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="back-btn" onclick="newAnalysis()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    New Analysis
+                </button>
+                <button class="export-btn" onclick="window.print()">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Export PDF
+                </button>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- 1. Executive Summary -->
+            <div class="card" style="padding: 32px; margin-bottom: 24px;">
+                <div style="display: flex; align-items: start; justify-content: space-between; margin-bottom: 24px;">
+                    <div>
+                        <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Executive Summary</h2>
+                        <p style="font-size: 14px; color: #64748b;">Overall document assessment and recommendation</p>
+                    </div>
+                    <span style="display: inline-block; padding: 8px 16px; background: #f1f5f9; border-radius: 8px; font-size: 16px; font-weight: 600; color: #1e293b;">
+                        Risk Score: ${riskPercent}/100
+                    </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;">
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <svg width="20" height="20" fill="none" stroke="${riskColor}" viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" x2="12" y1="8" y2="12"/>
+                                <line x1="12" x2="12.01" y1="16" y2="16"/>
+                            </svg>
+                            <span style="font-size: 13px; font-weight: 500; color: #64748b;">Risk Level</span>
+                        </div>
+                        <p style="font-size: 28px; font-weight: 700; color: ${riskColor}; margin-bottom: 8px;">${riskLevel} RISK</p>
+                        <div style="height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                            <div style="height: 100%; background: ${riskColor}; width: ${riskPercent}%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <svg width="20" height="20" fill="none" stroke="${riskColor}" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                            <span style="font-size: 13px; font-weight: 500; color: #64748b;">Recommendation</span>
+                        </div>
+                        <p style="font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #1e293b;">${data.recommendation?.includes('DO NOT SIGN') ? 'DO NOT SIGN' : data.recommendation?.includes('NEGOTIATE') ? 'NEGOTIATE FIRST' : 'SIGN AS-IS'}</p>
+                        <p style="font-size: 13px; color: #64748b; line-height: 1.6;">
+                            ${data.summary || 'Analysis complete. Review findings below.'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Recommended Counter-Proposals -->
+            ${data.counter_proposals && data.counter_proposals.length > 0 ? `
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <svg width="24" height="24" fill="none" stroke="#1e293b" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <h2 style="font-size: 20px; font-weight: 700; color: #1e293b;">Recommended Counter-Proposals</h2>
+                    </div>
+                    <p style="font-size: 13px; color: #64748b;">Priority-ranked clause recommendations to strengthen your agreement</p>
+                </div>
+
+                <div style="display: grid; gap: 16px;">
+                    ${data.counter_proposals.map((proposal, index) => {
+                        const priority = (proposal.priority || 'MEDIUM').toUpperCase();
+
+                        let priorityBadge;
+                        if (priority === 'BLOCKING') {
+                            priorityBadge = '<span style="display: inline-block; padding: 6px 14px; background: #7f1d1d; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">ðŸš« BLOCKING</span>';
+                        } else if (priority === 'HIGH') {
+                            priorityBadge = '<span style="display: inline-block; padding: 6px 14px; background: #dc2626; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">HIGH Priority</span>';
+                        } else if (priority === 'MEDIUM') {
+                            priorityBadge = '<span style="display: inline-block; padding: 6px 14px; background: #f59e0b; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">MEDIUM Priority</span>';
+                        } else {
+                            priorityBadge = '<span style="display: inline-block; padding: 6px 14px; background: #3b82f6; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">LOW Priority</span>';
+                        }
+
+                        return `
+                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; gap: 16px;">
+                                <h3 style="font-size: 16px; font-weight: 600; color: #1e293b; margin: 0; flex: 1;">
+                                    ${proposal.name || `Recommendation ${index + 1}`}
+                                </h3>
+                                ${priorityBadge}
+                            </div>
+
+                            ${proposal.suggested_clause && proposal.suggested_clause !== '[Clause text not generated - please regenerate report]' ? `
+                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
+                                <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0; text-align: justify;">
+                                    ${proposal.suggested_clause}
+                                </p>
+                            </div>
+
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="copyToClipboard(\`${proposal.suggested_clause.replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/"/g, '&quot;').replace(/\n/g, ' ')}\`, this)"
+                                        style="padding: 10px 18px; background: white; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;"
+                                        onmouseover="this.style.background='#f1f5f9'"
+                                        onmouseout="this.style.background='white'">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                    </svg>
+                                    Copy Text
+                                </button>
+                            </div>
+                            ` : `
+                            <div style="padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; margin-bottom: 12px;">
+                                <p style="font-size: 13px; color: #991b1b; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                    <svg width="16" height="16" fill="none" stroke="#dc2626" viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10"/>
+                                        <line x1="15" y1="9" x2="9" y2="15"/>
+                                        <line x1="9" y1="9" x2="15" y2="15"/>
+                                    </svg>
+                                    <strong>Clause text not generated.</strong> Please regenerate the report or add the clause manually.
+                                </p>
+                            </div>
+                            `}
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+            ` : ''}
+
+            `;
+            html += `
+
+            <!-- 3. Vendor & Jurisdiction Intelligence + Universal Criteria Grid -->
+            ${data.jurisdiction_intelligence ? `
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px;">
+                <div class="card" style="padding: 24px;">
+                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Vendor & Jurisdiction Intelligence
+                    </h3>
+                    <div style="display: grid; gap: 12px;">
+                        <div>
+                            <span style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">Vendor Name</span>
+                            <p style="font-size: 14px; font-weight: 600; color: ${isNotSpecified(data.jurisdiction_intelligence.vendor_name) ? '#94a3b8' : '#1e293b'};">
+                                ${data.jurisdiction_intelligence.vendor_name || '[Not Specified]'}
+                            </p>
+                        </div>
+                        <div>
+                            <span style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">Location</span>
+                            <p style="font-size: 14px; font-weight: 600; color: ${isNotSpecified(data.jurisdiction_intelligence.vendor_location) ? '#94a3b8' : '#1e293b'};">
+                                ${data.jurisdiction_intelligence.vendor_location || '[Not Specified]'}
+                            </p>
+                        </div>
+                        <div>
+                            <span style="font-size: 12px; color: #64748b; display: block; margin-bottom: 4px;">Classification</span>
+                            <span style="display: inline-block; padding: 4px 12px; background: ${data.jurisdiction_intelligence.vendor_classification === 'unknown' ? '#f1f5f9' : '#e0f2fe'}; color: ${data.jurisdiction_intelligence.vendor_classification === 'unknown' ? '#64748b' : '#075985'}; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                                ${data.jurisdiction_intelligence.vendor_classification || 'unknown'}
+                            </span>
+                        </div>
+                        ${isNotSpecified(data.jurisdiction_intelligence.vendor_name) ? `
+                        <div style="margin-top: 8px; padding: 12px; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 4px;">
+                            <p style="font-size: 12px; color: #92400e; line-height: 1.5;">
+                                <strong>âš  Note:</strong> Vendor details not found in document. Using default strict compliance for safety.
+                            </p>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 24px;">
+                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Universal NDA Criteria</h3>
+                    <div style="text-align: center; padding: 20px 0;">
+                        <div style="font-size: 56px; font-weight: 700; color: ${riskColor}; margin-bottom: 8px;">${protectionsFound}/${protectionsFound + protectionsMissing}</div>
+                        <p style="font-size: 14px; color: #64748b; margin-bottom: 16px;">Protections Found</p>
+                        <div style="height: 8px; background: #e2e8f0; border-radius: 999px; width: 60%; margin: 0 auto; overflow: hidden;">
+                            <div style="height: 100%; background: ${riskColor}; width: ${(protectionsFound / (protectionsFound + protectionsMissing || 1)) * 100}%;"></div>
+                        </div>
+                    </div>
+                    ${protectionsMissing > 0 ? `
+                    <div style="padding: 12px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626;">
+                        <p style="font-size: 13px; font-weight: 600; color: #991b1b; margin-bottom: 4px;">Missing:</p>
+                        <p style="font-size: 12px; color: #7f1d1d;">Check detailed compliance section below</p>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+            ` : ''}
+
+            <!-- 4. Detailed Compliance Analysis - COLLAPSIBLE -->
+            <div class="card" style="padding: 24px; margin-bottom: 24px;">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Detailed Compliance Analysis</h3>
+                <div style="display: grid; gap: 8px;">
+
+                    ${data.indian_law_compliance ? `
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                        <button onclick="toggleSection(this)" style="width: 100%; padding: 16px; display: flex; align-items: center; justify-content: space-between; background: white; border: none; cursor: pointer; text-align: left; transition: background 0.2s;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <svg width="20" height="20" fill="none" stroke="#10b981" viewBox="0 0 24 24">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                                <span style="font-size: 15px; font-weight: 600; color: #1e293b;">Indian Contract Act Compliance</span>
+                                <span style="display: inline-block; padding: 4px 10px; background: #f0fdf4; color: #166534; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                                    ${(data.indian_law_compliance.compliant_items?.length || 0)} compliant
+                                </span>
+                            </div>
+                            <svg width="20" height="20" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.2s;">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </button>
+                        <div style="display: none; padding: 0 16px 16px 16px; background: #f8fafc;">
+                            ${data.indian_law_compliance.compliant_items && data.indian_law_compliance.compliant_items.length > 0 ? `
+                            <div style="margin-bottom: 16px;">
+                                <h4 style="font-size: 13px; font-weight: 600; color: #059669; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                                    <svg width="16" height="16" fill="none" stroke="#10b981" viewBox="0 0 24 24">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    Compliant Items
+                                </h4>
+                                <ul style="display: grid; gap: 6px;">
+                                    ${data.indian_law_compliance.compliant_items.map(item => `
+                                        <li style="display: flex; align-items: start; gap: 8px; font-size: 13px; color: #065f46;">
+                                            <span style="color: #10b981; margin-top: 2px;">âœ“</span>
+                                            <span>${item}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                            ` : ''}
+
+                            ${data.indian_law_compliance.risks && data.indian_law_compliance.risks.length > 0 ? `
+                            <div>
+                                <h4 style="font-size: 13px; font-weight: 600; color: #f59e0b; margin-bottom: 12px;">
+                                    <svg width="16" height="16" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                        <line x1="12" x2="12" y1="9" y2="13"/>
+                                        <line x1="12" x2="12.01" y1="17" y2="17"/>
+                                    </svg>
+                                    Identified Risks
+                                </h4>
+                                ${data.indian_law_compliance.risks.map(risk => `
+                                    <div style="padding: 10px; background: #fef3c7; border-left: 3px solid #f59e0b; margin-bottom: 6px; border-radius: 4px; font-size: 13px; color: #92400e;">
+                                        ${risk}
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <!-- Company Policy Compliance (add if needed) -->
+                    ${data.company_policy_compliance ? `
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                        <button onclick="toggleSection(this)" style="width: 100%; padding: 16px; display: flex; align-items: center; justify-content: space-between; background: white; border: none; cursor: pointer; text-align: left; transition: background 0.2s;">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <svg width="20" height="20" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" x2="12" y1="8" y2="12"/>
+                                    <line x1="12" x2="12.01" y1="16" y2="16"/>
+                                </svg>
+                                <span style="font-size: 15px; font-weight: 600; color: #1e293b;">10XDS Company Policy Compliance</span>
+                            </div>
+                            <svg width="20" height="20" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.2s;">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                        </button>
+                        <div style="display: none; padding: 0 16px 16px 16px; background: #f8fafc;">
+                            <p style="font-size: 13px; color: #64748b;">Company policy compliance details...</p>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+            // end of html assembly, insert into resultsSection
+            resultsSection.innerHTML = html;
+        }
+
+        // Toggle collapsible section (used by results)
+        function toggleSection(button) {
+            const content = button.nextElementSibling;
+            const icon = button.querySelector('svg:last-child');
+
+            if (content.style.display === 'none' || !content.style.display) {
+                content.style.display = 'block';
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                content.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Copy to clipboard function used by results area
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = button.innerHTML;
+                button.innerHTML = 'Copied!';
+                button.style.background = '#10b981';
+                button.style.color = 'white';
+                button.style.borderColor = '#10b981';
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.style.background = 'white';
+                    button.style.color = '#475569';
+                    button.style.borderColor = '#cbd5e0';
+                }, 2000);
+            }).catch(err => {
+                alert('Failed to copy text');
+            });
+        }
+
+        function newAnalysis() {
+            uploadView.style.display = 'block';
+            resultsSection.classList.remove('active');
+            resultsSection.innerHTML = '';
+            fileInput.value = '';
+            fileName.style.display = 'none';
+            criteriaTextarea.value = '';
+            charCount.textContent = '0 characters';
+            documentCategory.value = '';
+            selectedPredefinedCriteria.clear();
+            criteriaOptions.innerHTML = '';
+            predefinedCriteriaSection.style.display = 'none';
+            criteriaOptions.classList.remove('active');
+            updateSelectedCount();
+            window.scrollTo(0,0);
+        }
+
+        window.newAnalysis = newAnalysis;
+        /*******************************
+         * Preview Default Criteria (optional server endpoint integration)
+         * This preserves the behavior from your fakeindex.html preview button
+         *******************************/
+        // Add a safe handler for any preview button (keeps backwards-compatible fetch)
+        (function attachPreviewHandler(){
+            const previewBtn = document.getElementById('previewDefaultBtn');
+            if (!previewBtn) return;
+
+            previewBtn.addEventListener('click', async function(){
+                // open modal already handled (we attached openDefaultModal earlier)
+                openDefaultModal();
+            });
+        })();
+
+        // Optional: fetch preview from server if endpoint exists (kept from original)
+        const previewCriteriaButtons = document.querySelectorAll('#previewCriteria');
+        previewCriteriaButtons.forEach(btn => {
+            btn && btn.addEventListener('click', async function() {
+                const button = this;
+                button.disabled = true;
+                button.innerHTML = '<svg width="16" height="16" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#e5e7eb" stroke-width="4" fill="none"></circle></svg> Loading.';
+                try {
+                    const response = await fetch('/preview-criteria');
+                    const data = await response.json();
+                    if (data.success && data.criteria) {
+                        const criteriaList = data.criteria.map((c,i) => `${i+1}. ${c}`).join('\n');
+                        alert(`âœ… Default NDA Criteria (${data.count} total)\n\n${criteriaList}\n\nThese criteria are automatically applied if you don't provide custom ones.`);
+                    } else {
+                        alert('âŒ Could not load default criteria. Please try again.');
+                    }
+                } catch(err) {
+                    alert('âŒ Error fetching criteria: ' + (err.message || err));
+                } finally {
+                    button.disabled = false;
+                    button.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg> Preview Default Criteria`;
+                }
+            });
+        });
+
+        // Small UI niceties/styles for preview button hover
+        const style = document.createElement('style');
+        style.textContent = `
+            #previewCriteria:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; }
+            @keyframes spin { to { transform: rotate(360deg); } }
+        `;
+        document.head.appendChild(style);
+
+    </script>
+</body>
+</html>
