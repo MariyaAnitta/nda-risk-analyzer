@@ -55,6 +55,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 #GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+#GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 '''if not GEMINI_KEY:
     print(" ERROR: Missing GEMINI_API_KEY in .env")
     sys.exit(1)'''
@@ -87,6 +88,22 @@ try:
 except Exception as e:
     print(f" LLM Initialization Failed: {e}")
     sys.exit(1)
+
+'''try:
+    llm = ChatOpenAI(
+        model="llama-3.3-70b-versatile", 
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1",
+        temperature=0.0,
+        max_tokens=32000,  # Groq's max for this model
+        timeout=180
+    )
+    print("LLM initialized successfully with Groq (Llama 3.3 70B)")
+    print("Speed: 280 tokens/sec | Rate: 1K RPM | FREE")
+except Exception as e:
+    print(f"LLM Initialization Failed: {e}")
+    sys.exit(1)'''
+
 
 
 def load_indian_law_rules() -> dict:
