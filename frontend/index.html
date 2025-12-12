@@ -627,6 +627,7 @@ fileInput.addEventListener("click", (e) => {
          *******************************/
         analyzeForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            syncDefaultCriteriaInput();
 
             const file = fileInput.files[0];
             const customCriteriaText = criteriaTextarea.value.trim();
@@ -782,6 +783,10 @@ syncDefaultCriteriaInput();
     const riskScore = riskData.risk_score || riskData.risk_percentage || 0;
     const riskLevel = riskData.risk_level || 'MODERATE';
     
+    const totalCriteria = data.metadata && data.metadata.total_criteria_count 
+        ? data.metadata.total_criteria_count  // ← USE THIS FIELD
+        : (data.protections_found.length + data.protections_missing.length);
+        
     const protectionsFound = data.protections_found ? data.protections_found.length : 0;
     const protectionsMissing = data.protections_missing ? data.protections_missing.length : 0;
 
@@ -1093,12 +1098,12 @@ html += `
 
                 <div class="card" style="padding: 24px;">
     <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Universal NDA Criteria</h3>
+    
     <div style="text-align: center; padding: 20px 0;">
-
         <div style="font-size: 56px; font-weight: 700; color: ${riskColor}; margin-bottom: 8px;">
-            ${data.protections_found ? data.protections_found.length : 0}
+           ${protectionsFound}
             /
-            ${(data.protections_found ? data.protections_found.length : 0) + (data.protections_missing ? data.protections_missing.length : 0)}
+            ${totalCriteria}
         </div>
 
         <p style="font-size: 14px; color: #64748b; margin-bottom: 16px;">Protections Found</p>
@@ -1112,21 +1117,38 @@ html += `
                                 (data.protections_missing ? data.protections_missing.length : 0) ||
                                 1
                             )) * 100
-                        }%;">
-            </div>
+                        }%;"></div>
         </div>
     </div>
 
-    ${
-        data.protections_missing && data.protections_missing.length > 0
-            ? `
-                <div style="padding: 12px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626;">
-                    <p style="font-size: 13px; font-weight: 600; color: #991b1b; margin-bottom: 4px;">Missing:</p>
-                    <p style="font-size: 12px; color: #7f1d1d;">Check detailed compliance section below</p>
-                </div>
-            `
-            : ''
-    }
+    <!-- ✅ FIXED: Show ALL missing protections (no "+ X more" trick) -->
+    ${data.protections_missing && data.protections_missing.length > 0 ? `
+        <div style="padding: 14px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626; margin-top: 16px;">
+            <p style="font-size: 13px; font-weight: 700; color: #991b1b; margin-bottom: 8px;">
+                ✗ Missing Protections (${data.protections_missing.length}):
+            </p>
+
+            <ul style="margin: 0; padding-left: 20px; list-style: disc;">
+                ${data.protections_missing.map(item => `
+                    <li style="font-size: 12px; color: #7f1d1d; margin-bottom: 4px;">
+                        ${item.name || item}
+                    </li>
+                `).join('')}
+            </ul>
+            
+            ${data.protections_missing.length > 5 ? `
+                <p style="font-size: 11px; color: #92400e; margin-top: 8px; font-style: italic;">
+                    
+                </p>
+            ` : ''}
+        </div>
+    ` : `
+        <div style="padding: 12px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 16px;">
+            <p style="font-size: 13px; color: #166534; margin: 0; font-weight: 600;">
+                ✓ All evaluated protections are present
+            </p>
+        </div>
+    `}
 </div>
                 </div>
             </div>

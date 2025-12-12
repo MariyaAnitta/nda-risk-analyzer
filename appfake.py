@@ -1,5 +1,6 @@
 import os
 import sys
+from flask_cors import CORS
 import json
 import re
 from pathlib import Path
@@ -9,10 +10,9 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 import PyPDF2
 from docx import Document as DocxDocument
-
-
 from risk_schema import RISK_ANALYSIS_SCHEMA
 from risk_pattern_detector import scan_risky_patterns
 from definition_analyzer import analyze_definitions
@@ -30,9 +30,14 @@ try:
 except ImportError:
     pdfplumber = None
 
-load_dotenv()
+#load_dotenv()
+dotenv_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=dotenv_path)
+
 
 app = Flask(__name__)
+
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'docx', 'txt'}
@@ -40,23 +45,56 @@ app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'docx', 'txt'}
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-
+#OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+'''GROQ_API_KEY = os.getenv("GROQ_API_KEY")'''
 if not GEMINI_KEY:
     print(" ERROR: Missing GEMINI_API_KEY in .env")
     sys.exit(1)
-
 try:
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash-lite",
         google_api_key=GEMINI_KEY,
         temperature=0.0,
         max_output_tokens=50000,
-        request_timeout=180
+        request_timeout=600
     )
 except Exception as e:
     print(f" LLM Initialization Failed: {e}")
     sys.exit(1)
+
+"""try:
+    llm = ChatOpenAI(
+        model="meta-llama/llama-3-70b-instruct",
+        api_key=OPENROUTER_API_KEY,  # Correct parameter
+        base_url="https://openrouter.ai/api/v1",  # Correct parameter (not openai_api_base)
+        temperature=0.0,
+        max_tokens=50000,
+        timeout=180,
+        default_headers={  #  CORRECT placement
+            "HTTP-Referer": "http://localhost:5000",
+            "X-Title": "NDA Risk Analyzer"
+        }
+    )
+    print(" LLM initialized successfully with OpenRouter")
+except Exception as e:
+    print(f" LLM Initialization Failed: {e}")
+    sys.exit(1)"""
+'''try:
+    llm = ChatOpenAI(
+        model="llama-3.1-8b-instant",
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1",
+        temperature=0.0,
+        max_tokens=32000,  # Groq's max for this model
+        timeout=180
+    )
+    print(" LLM initialized successfully with Groq (Llama 3.3 70B)")
+    print(" Speed: 280 tokens/sec | Rate: 1K RPM | FREE")
+except Exception as e:
+    print(f" LLM Initialization Failed: {e}")
+    sys.exit(1)'''
+
 
 def load_indian_law_rules() -> dict:
     """Load Indian Contract Act compliance rules."""
@@ -193,359 +231,315 @@ INDIAN_LAW_RULES = load_indian_law_rules()
 COMPANY_REQUIREMENTS = load_company_requirements()
 JURISDICTION_MAPPING = load_jurisdiction_mapping()
 
-document_parser = Agent(
-    role="Document Parser",
-    goal="Extract all key clauses, obligations, penalties, confidentiality, liabilities, AND jurisdiction details.",
-    backstory="""You are a precise legal analyst. Identify key clauses like confidentiality, liability,
-    duration, penalties, indemnity, jurisdiction, and termination. 
+document_analyzer = Agent(
+    role="Comprehensive Document Intelligence Specialist",
+    goal="Extract ALL key information: clauses, jurisdiction details, vendor info, AND hidden risks in ONE analysis pass.",
+    backstory=f"""You are an expert legal analyst who performs complete document analysis in a single pass.
     
-    CRITICAL: Also extract:
-    - Vendor name and location/address
-    - Governing law clause
-    - Jurisdiction/dispute resolution clause
-    - Any mentions of geography or country
+    YOUR COMPREHENSIVE ANALYSIS INCLUDES:
     
-    List them clearly with clause numbers and short explanations.""",
-    llm=llm,
-    verbose=False,
-    allow_delegation=False,
-)
-
-# NEW AGENT: Jurisdiction Analyzer
-jurisdiction_analyzer = Agent(
-    role="Jurisdiction & Entity Intelligence Specialist",
-    goal="Extract vendor details, location, governing law ONLY IF EXPLICITLY STATED in the document. Never hallucinate or assume information.",
-    backstory=f"""You are an international contract jurisdiction expert with a strict rule: ONLY extract information that is EXPLICITLY written in the document.
-
-    CRITICAL RULES:
-    - If vendor name is NOT mentioned → Return "[Not Specified]"
-    - If vendor location is NOT mentioned → Return "[Not Specified]"
-    - If governing law is NOT mentioned → Return "[Not Specified]"
-    - If jurisdiction clause is NOT mentioned → Return "[Not Specified]"
-    - NEVER guess, infer, or make up information
-    - NEVER use example company names like "Acme Corp" or "ABC Company"
-    - If a field is unclear or ambiguous → Return "[Not Specified]"
+    ## SECTION 1: CLAUSE EXTRACTION
+    - Identify key clauses: confidentiality, liability, duration, penalties, indemnity, jurisdiction, termination
+    - Extract clause numbers and provide short explanations
     
-    Your job is to:
+    ## SECTION 2: JURISDICTION INTELLIGENCE
+    **CRITICAL RULES - ONLY EXTRACT IF EXPLICITLY STATED:**
+    - Vendor name: ONLY if mentioned → else "[Not Specified]"
+    - Vendor location: ONLY if mentioned → else "[Not Specified]"
+    - Governing law: ONLY if mentioned → else "[Not Specified]"
+    - Jurisdiction clause: ONLY if mentioned → else "[Not Specified]"
+    - NEVER guess or use example names like "Acme Corp"
     
-    1. EXTRACT from the NDA document (ONLY if explicitly stated):
-       - Vendor/Party name (the OTHER party, not 10xds)
-       - Vendor registered address/location (look for country)
-       - Governing law clause (which country's law applies)
-       - Jurisdiction clause (which courts/arbitration)
+    Classification logic:
+    - If location specified → Classify as: indian_domestic | international_tier1 | international_tier2 | high_risk
+    - If location NOT specified → "unknown" + default to STRICT compliance
     
-    2. CLASSIFY vendor location (ONLY if location was found):
-       - Indian domestic vendor
-       - International Tier 1 (Singapore, US, UK, Canada, Australia)
-       - International Tier 2 (Germany, France, Netherlands, Japan, UAE)
-       - High-risk jurisdiction (China, Russia)
-       - If location not specified → "unknown"
+    Jurisdiction mapping: {json.dumps(JURISDICTION_MAPPING, indent=2)}
     
-    3. DETERMINE compliance requirements based on classification:
-       - Indian domestic → STRICT Indian Contract Act compliance
-       - International Tier 1 → MODERATE compliance + arbitration flexibility
-       - International Tier 2/High-risk → BASIC compliance + mandatory Indian arbitration
-       - Unknown → Default to STRICT compliance for safety
+    ## SECTION 3: HIDDEN RISK DETECTION
+    You receive preprocessed intelligence:
+    - REGEX FLAGS: Suspicious patterns (will be passed in task description)
+    - DEFINITIONS: Overly broad definitions
+    - CROSS-REFS: How clauses interconnect
     
-    OUTPUT FORMAT (JSON-style):
+    Identify hidden risks:
+    1. DEFINITIONAL TRAPS (broad definitions + perpetual survival)
+    2. CROSS-REFERENCE TRAPS (distant clause connections)
+    3. IMBALANCE TRAPS (asymmetric obligations)
+    4. TEMPORAL TRAPS (vague timing extending obligations)
+    5. SCOPE CREEP TRAPS ("including but not limited to")
+    6. COMBINED RISKS (multiple clauses creating unexpected risk)
+    
+    For each hidden risk found:
+    
+    🎭 HIDDEN TRAP #[N]: [Trap Name]
+    Primary Clause: [Clause number only - NO full quote]
+    Hidden Mechanism: [Type in 3-5 words]
+    How It Works: [1 sentence max, 15-20 words]
+    Real Meaning: [1 sentence max, 15-20 words - business impact]
+    Severity: [CRITICAL/HIGH/MEDIUM/LOW]
+    Detection Method: [Regex/LLM/Definition/Cross-ref]
+    Confidence: [0.0-1.0]
+    
+    **PRIORITIZE top 5-7 risks only (skip minor LOW risks)**
+    
+    OUTPUT FORMAT:
+    
+    === SECTION 1: CLAUSE EXTRACTION ===
+    [List clauses with numbers and brief explanations]
+    
+    === SECTION 2: JURISDICTION INTELLIGENCE ===
     {{
-      "vendor_name": "[Not Specified]" or "actual name from document",
-      "vendor_location": "[Not Specified]" or "actual location from document",
-      "vendor_country": "[Not Specified]" or "actual country from document",
-      "governing_law": "[Not Specified]" or "actual law from document",
-      "jurisdiction_clause": "[Not Specified]" or "actual clause from document",
-      "vendor_classification": "indian_domestic | international_tier1 | international_tier2 | high_risk | unknown",
+      "vendor_name": "[Not Specified]" or "actual name",
+      "vendor_location": "[Not Specified]" or "actual location",
+      "vendor_country": "[Not Specified]" or "actual country",
+      "governing_law": "[Not Specified]" or "actual law",
+      "jurisdiction_clause": "[Not Specified]" or "actual clause",
+      "vendor_classification": "indian_domestic | international_tier1 | unknown",
       "compliance_level_required": "STRICT | MODERATE | BASIC",
-      "jurisdiction_risks": ["list any risks identified, or 'None identified' if all fields are [Not Specified]"]
+      "jurisdiction_risks": ["list risks or 'None identified'"]
     }}
     
-    EXAMPLE 1 (Information exists in document):
-    {{
-      "vendor_name": "TechCorp Private Limited",
-      "vendor_location": "Bangalore, Karnataka, India",
-      "vendor_country": "India",
-      "governing_law": "Indian law as per Indian Contract Act, 1872",
-      "jurisdiction_clause": "Courts of Bangalore shall have exclusive jurisdiction",
-      "vendor_classification": "indian_domestic",
-      "compliance_level_required": "STRICT",
-      "jurisdiction_risks": ["None identified"]
-    }}
+    === SECTION 3: HIDDEN RISKS ===
+    [List max 7 hidden traps using compact format above]
     
-    EXAMPLE 2 (No vendor information in document):
-    {{
-      "vendor_name": "[Not Specified]",
-      "vendor_location": "[Not Specified]",
-      "vendor_country": "[Not Specified]",
-      "governing_law": "[Not Specified]",
-      "jurisdiction_clause": "[Not Specified]",
-      "vendor_classification": "unknown",
-      "compliance_level_required": "STRICT",
-      "jurisdiction_risks": ["Vendor identity unknown - cannot assess jurisdiction risks. Default to strict compliance."]
-    }}
+    Detection Summary:
+    - Total Hidden Risks Found: [N]
+    - Regex Matches: [N] (LLM Confirmed: [N])
+    - Definitional Traps: [N]
+    - Cross-Reference Traps: [N]
     """,
     llm=llm,
     verbose=False,
     allow_delegation=False,
 )
 
-# NEW AGENT: Indian Law Compliance Checker
-indian_law_validator = Agent(
-    role="Indian Contract Act Compliance Validator",
-    goal="Check NDA against Indian Contract Act provisions and flag violations.",
-    backstory=f"""You are an Indian contract law expert specializing in the Indian Contract Act, 1872.
+# ===================================
+# AGENT 2: COMPLIANCE VALIDATOR (MEGA)
+# ===================================
+compliance_validator = Agent(
+    role="Multi-Dimensional Compliance & Risk Assessment Specialist",
+    goal="Perform ALL compliance checks (Indian law + Company policy + Universal criteria) AND calculate final risk score in ONE analysis.",
+    backstory=f"""You are a comprehensive compliance expert who validates against multiple frameworks simultaneously.
     
-    Your job is to check the NDA for:
+    YOUR MULTI-DIMENSIONAL ANALYSIS:
     
+    ## DIMENSION 1: INDIAN CONTRACT ACT COMPLIANCE
+    
+    Check for:
     1. SECTION 10 ESSENTIALS (must exist):
-       - Free consent of parties
-       - Lawful consideration
-       - Competent parties
-       - Lawful object
+       - Free consent, lawful consideration, competent parties, lawful object
     
     2. SECTION 27 VIOLATIONS (must NOT exist):
-       - Post-employment non-compete clauses (VOID in India)
+       - Post-employment non-compete (VOID in India)
        - Unreasonable trade restraints
-       - Absolute prohibitions on business activity
-       NOTE: Confidentiality during/after employment IS VALID. Only non-compete after termination is void.
+       NOTE: Confidentiality during/after employment IS VALID
     
     3. SECTION 73-74 BREACH REMEDIES:
-       - Check if liquidated damages are reasonable (not penalties)
-       - Flag excessive penalty clauses
+       - Liquidated damages must be reasonable (not penalties)
     
     4. JURISDICTION REQUIREMENTS:
-       - For Indian companies, check if Indian jurisdiction is available
-       - Flag foreign-only jurisdiction as enforcement risk
+       - Indian companies need Indian jurisdiction available
     
-    COMPLIANCE DATABASE:
-    {json.dumps(INDIAN_LAW_RULES.get('section_27_restraints', {}), indent=2)}
+    Database: {json.dumps(INDIAN_LAW_RULES.get('section_27_restraints', {}), indent=2)}
     
-    OUTPUT: List of:
-    - ✓ COMPLIANT items (with evidence)
-    - ✗ VIOLATIONS found (with severity: BLOCKING/HIGH/MEDIUM)
-    - ⚠ RISKS identified (enforcement concerns)
-    """,
-    llm=llm,
-    verbose=False,
-    allow_delegation=False,
-)
-
-# NEW AGENT: Company Policy Checker
-company_policy_validator = Agent(
-    role="10xds Company Policy Compliance Checker",
-    goal="Validate NDA against 10xds-specific requirements and flag violations or missing protections.",
-    backstory=f"""You are the 10xds legal compliance officer. You know company policy inside-out.
+    OUTPUT:
+    - ✅ COMPLIANT items (with evidence)
+    - ❌ VIOLATIONS (severity: BLOCKING/HIGH/MEDIUM)
+    - ⚠ RISKS (enforcement concerns)
     
-    Check the NDA for:
+    ## DIMENSION 2: 10XDS COMPANY POLICY COMPLIANCE
     
-    1. CRITICAL VIOLATIONS (BLOCKING - cannot sign):
+    Check for:
+    1. CRITICAL VIOLATIONS (BLOCKING):
        - Unlimited liability
        - Perpetual confidentiality without exceptions
-       - Automatic IP transfer to vendor
+       - Automatic IP transfer
        - One-sided termination restrictions
     
-    2. MANDATORY PROTECTIONS (must exist - flag HIGH if missing):
-       - Data protection & privacy clause
+    2. MANDATORY PROTECTIONS (HIGH if missing):
+       - Data protection clause
        - IP ownership clarity
        - Liability cap
        - Termination clause
-       - Return/destruction of information
+       - Return/destruction clause
     
-    3. PREFERRED TERMS (flag LOW if not met):
-       - NDA duration: 2-3 years preferred
-       - Confidentiality period post-termination: 2-3 years
-       - Jurisdiction: Indian courts/arbitration preferred
-       - Governing law: Indian law preferred
+    3. PREFERRED TERMS (LOW if not met):
+       - NDA duration: 2-3 years
+       - Post-termination confidentiality: 2-3 years
+       - Indian courts/arbitration preferred
     
-    COMPANY REQUIREMENTS DATABASE:
-    Critical Violations: {json.dumps(COMPANY_REQUIREMENTS.get('critical_violations', {}).get('blocking_clauses', []), indent=2)}
+    Database: {json.dumps(COMPANY_REQUIREMENTS.get('critical_violations', {}).get('blocking_clauses', []), indent=2)}
     
-    Mandatory Protections: {json.dumps(COMPANY_REQUIREMENTS.get('mandatory_protections', {}).get('required_clauses', []), indent=2)}
+    OUTPUT:
+    - 🚫 BLOCKING VIOLATIONS (recommend DO NOT SIGN)
+    - ❌ MISSING PROTECTIONS (with severity)
+    - ℹ️ PREFERENCE GAPS (negotiable)
     
-    OUTPUT: Categorized findings:
-    - 🚫 BLOCKING VIOLATIONS (if any - recommend DO NOT SIGN)
-    - ✗ MISSING PROTECTIONS (with severity)
-    - ℹ PREFERENCE GAPS (negotiable items)
-    """,
-    llm=llm,
-    verbose=False,
-    allow_delegation=False,
-)
-# ✅ NEW AGENT: Hidden Risk & Trap Clause Detector
-hidden_clause_detector = Agent(
-    role="Hidden Risk & Trap Clause Specialist",
-    goal="Identify disguised, indirect, or cross-referenced obligations that create unexpected risks using regex flags, definition analysis, and cross-reference mapping.",
-    backstory="""You are an expert at finding risks that aren't obvious on first reading.
+    ## DIMENSION 3: UNIVERSAL NDA CRITERIA ASSESSMENT
     
-    You receive THREE types of preprocessed intelligence:
-    1. REGEX FLAGS: Suspicious patterns found by automated scanner
-    2. DEFINITION ANALYSIS: Overly broad or circular definitions
-    3. CROSS-REFERENCE MAP: How clauses interconnect across the document
+    You will receive a list of universal protective criteria.
     
-    Your job is to analyze these flags and determine which are REAL hidden risks vs false positives.
+    For each criterion:
+    - If FOUND: "FOUND: [name] | Clause: [number] | Evidence: [1-2 sentences]"
+    - If MISSING: "NOT FOUND: [name] | Risk: [1 sentence]"
     
-    TYPES OF HIDDEN RISKS YOU FIND:
+    COUNT:
+    - F = Protections FOUND
+    - M = Protections MISSING
+    - T = Total criteria
+    Verify: F + M = T
     
-    1. DEFINITIONAL TRAPS
-       - Overly broad definitions that expand obligations
-       - Example: "Confidential Information means ANY information" + "Survives perpetually" = Never speak again
+    ## DIMENSION 4: OVERALL RISK CALCULATION
     
-    2. CROSS-REFERENCE TRAPS
-       - Clauses that gain teeth through distant references
-       - Example: Clause 3 says "reasonable fees" but Clause 18 defines "reasonable" as "unlimited"
+    **STRICT PERCENTAGE-BASED SCORING:**
     
-    3. IMBALANCE TRAPS
-       - Asymmetric obligations (vendor "may", company "shall")
-       - One party has rights, other has only duties
+    STEP 1: Calculate Weighted Points
+    - BLOCKING/CRITICAL = 15 points each
+    - HIGH severity = 10 points each
+    - MEDIUM severity = 5 points each
+    - LOW severity = 2 points each
+    - Missing protections = 3 points each
     
-    4. TEMPORAL TRAPS
-       - Vague timing that extends obligations indefinitely
-       - "Reasonable period", "promptly", "as long as necessary"
+    STEP 2: Calculate Percentage
+    Risk_Percentage = (Total_Points / 100) * 100
     
-    5. SCOPE CREEP TRAPS
-       - "Including but not limited to" language
-       - "Any and all", "without limitation"
+    STEP 3: Determine Risk Level (STRICT BOUNDARIES)
+    - 0-33%: LOW RISK
+    - 34-66%: MODERATE RISK
+    - 67-100%: HIGH RISK
     
-    6. COMBINED RISKS (MOST DANGEROUS)
-       - Multiple clauses that work together to create unexpected risk
-       - Example: Broad definition + perpetual survival + unlimited liability = disaster
+    **NO OVERRIDES - Use only percentage thresholds**
     
-    FOR EACH HIDDEN RISK FOUND:
+    OUTPUT FORMAT:
     
-    Format your output as:
+    === INDIAN CONTRACT ACT COMPLIANCE ===
+    [List compliant items, violations, risks]
     
-    🎭 HIDDEN TRAP #[N]: [Trap Name]
-    Primary Clause: [Quote the main clause, with clause number]
-    Hidden Mechanism: [Definition trap / Cross-reference trap / Imbalance trap / Temporal trap / Scope trap / Combined risk]
-    How It Works: [Explain the trap in 2-3 sentences - connect the dots between clauses]
-    Real Meaning: [What this ACTUALLY means for 10xds in plain language]
-    Severity: [CRITICAL / HIGH / MEDIUM / LOW]
-    Detection Method: [Regex + LLM / Definition Analysis / Cross-Reference Mapping / Combined]
-    Confidence: [0.0-1.0 score]
+    === 10XDS COMPANY POLICY COMPLIANCE ===
+    [List blocking violations, missing protections, preference gaps]
     
-    FALSE POSITIVE FILTERING:
-    - If regex flagged "unlimited growth potential" → NOT a risk (context is positive)
-    - If "unlimited liability" but Clause X caps it → Downgrade to LOW risk
-    - If broad definition but narrow application → Explain why acceptable
+    === UNIVERSAL NDA CRITERIA ===
+    Protections Found: [F] out of [T]
+    Protections Missing: [M] out of [T]
+    [List found and missing protections]
     
-    CRITICAL: Always check surrounding context (3 clauses before/after) before confirming a risk.
+    === OVERALL RISK ASSESSMENT ===
+    Risk Score: [X] points
+    Risk Percentage: [Y]%
+    Risk Level: [LOW RISK / MODERATE RISK / HIGH RISK]
+    
+    Category Breakdown:
+    - Hidden Risks: [count]
+    - Indian Law Compliance: [count]
+    - Company Policy Compliance: [count]
+    - Universal Criteria: [count]
+    - Jurisdiction Risks: [count]
     """,
     llm=llm,
     verbose=False,
     allow_delegation=False,
 )
 
-risk_evaluator = Agent(
-    role="Risk Assessment Specialist",
-    goal="Consolidate all compliance findings and assess overall risk level.",
-    backstory="""You are a legal risk reviewer who consolidates findings from:
-    - Universal NDA criteria (existing check)
-    - Indian Contract Act compliance
-    - 10xds company policy compliance
-    - Jurisdiction risks
-    
-    RISK SCORING LOGIC:
-    1. If ANY BLOCKING violation found → HIGH RISK (automatic)
-    2. Otherwise calculate:
-       - Count HIGH severity issues
-       - Count MEDIUM severity issues
-       - Count LOW severity issues
-       - Weight: HIGH=3, MEDIUM=2, LOW=1
-       - Risk Score = (weighted sum / total possible) * 100
-    
-    3. Risk Level Classification:
-       - 0-33%: LOW RISK
-       - 34-66%: MODERATE RISK  
-       - 67-100%: HIGH RISK
-    
-    OUTPUT: Structured risk assessment with:
-    - Overall risk level and percentage
-    - Breakdown by category (Indian law / Company policy / Universal criteria)
-    - Critical issues summary
-    """,
-    llm=llm,
-    verbose=False,
-    allow_delegation=False,
-)
-
-mitigation_advisor = Agent(
-    role="Legal Mitigation Advisor & Clause Drafter",
-    goal="Provide SPECIFIC, READY-TO-USE counter-proposal clauses with complete legal language for every identified issue.",
-    backstory="""You are an expert contract negotiator and legal drafter who creates actual contract clauses.
-    
-    For EVERY issue identified (violations, missing protections, risks), you MUST provide:
-    
-    1. Current Issue: [1 sentence problem statement]
-    2. Suggested Clause: [FULL CONTRACT LANGUAGE - 2-4 sentences of actual legal text that can be copied directly into the contract]
-    3. Benefit: [1 sentence explaining risk reduction]
-    
-    CRITICAL RULES:
-    - NEVER write "Specific clause recommendations will be provided based on document context"
-    - ALWAYS provide complete, ready-to-use legal language
-    - Each suggested clause must be 2-4 sentences of actual contract text
-    - Use professional legal terminology
-    - Make clauses immediately usable without modification
-    
-    PRIORITIZE in this order:
-    1. 🚫 BLOCKING violations (most critical)
-    2. ✗ Indian Contract Act violations (HIGH priority)
-    3. ✗ Missing mandatory 10xds protections (HIGH priority)
-    4. ⚠ Jurisdiction/enforcement risks (MEDIUM priority)
-    5. ℹ Preference gaps (LOW priority)
-    
-    EXAMPLE FORMAT:
-    
-    Modification #1: Data Protection & Privacy Clause (HIGH)
-    Current Issue: No data protection clause exists, exposing 10xds to GDPR and Indian data law violations.
-    Suggested Clause: Each party shall comply with all applicable data protection laws and regulations, including but not limited to the Information Technology Act, 2000 and the Personal Data Protection Bill, in connection with any personal data processed under this Agreement. The Receiving Party shall implement and maintain appropriate technical and organizational measures to protect such personal data against unauthorized or unlawful processing and against accidental loss, destruction, damage, alteration, or disclosure. Both parties agree to notify each other within 24 hours of any data breach or suspected breach.
-    Benefit: Ensures legal compliance with Indian and international data protection laws and limits liability exposure.
-    
-    NEVER use markdown code fences (```). Write in plain text only.
-    Keep it professional, brief, and actionable.
-    """,
-    llm=llm,
-    verbose=False,
-    allow_delegation=False,
-)
-
-
+# ===================================
+# AGENT 3: REPORT GENERATOR (MEGA)
+# ===================================
 report_generator = Agent(
-    role="Report Writer",
-    goal="Create a comprehensive, clean risk assessment report with all compliance dimensions.",
-    backstory="""You are a professional legal risk report writer. Present information in a clean,
-    easy-to-read format for HR/Legal teams.
+    role="Comprehensive Report Writer & Mitigation Strategist",
+    goal="Generate COMPLETE REPORT with ALL counter-proposals using ready-to-use legal clauses.",
+    backstory="""You are a professional legal report writer who creates complete analysis reports with actionable mitigation strategies.
     
-    REPORT STRUCTURE:
-    1. Executive Summary (risk level + key concerns)
-    2. 🎭 HIDDEN & DISGUISED RISKS (NEW SECTION - comes early!)  # NEW SECTION ADDED
-    3. Vendor & Jurisdiction Intelligence
-    4. Indian Contract Act Compliance
-    5. 10xds Company Policy Compliance
-    6. Universal NDA Criteria Assessment
-    7. Risk Score & Recommendation
-    8. Counter-Proposals
+    YOUR COMPLETE REPORT INCLUDES:
     
-    FORMAT RULES:
+    ## PART 1: COUNTER-PROPOSALS (PRIORITY SECTION)
+    
+    For EVERY identified issue, provide:
+    
+    ---PROPOSAL START---
+    Name: [Short descriptive name, max 8 words]
+    Priority: [BLOCKING|HIGH|MEDIUM|LOW]
+    Issue: [1 sentence problem statement]
+    Clause: [Complete legal text in 2-4 sentences with proper punctuation]
+    Benefit: [1 sentence benefit statement]
+    ---PROPOSAL END---
+    
+    **CRITICAL RULES:**
+    - Start immediately with ---PROPOSAL START--- (NO preamble)
+    - Each proposal MUST have all 5 fields
+    - Clause field = 2-4 complete sentences of contract language
+    - Generate 5-8 proposals minimum
+    - NEVER use markdown code fences
+    
+    Priority order:
+    1. BLOCKING/CRITICAL issues (Priority: BLOCKING)
+    2. Missing mandatory protections (Priority: HIGH)
+    3. HIGH severity hidden risks (Priority: HIGH)
+    4. Indian law violations (Priority: HIGH/MEDIUM)
+    5. Company policy gaps (Priority: MEDIUM)
+    6. Preference gaps (Priority: LOW)
+    
+    ## PART 2: COMPLETE ANALYSIS REPORT
+    
+    Structure:
+    
+    === LEGAL DOCUMENT RISK ASSESSMENT REPORT ===
+    
+    EXECUTIVE SUMMARY:
+    [2-3 sentences: Risk level, concerns, recommendation]
+    
+    🎭 HIDDEN & DISGUISED RISKS:
+    [Copy hidden traps from document_analyzer output]
+    
+    Detection Summary:
+    - Total Hidden Risks Found: [N]
+    - Regex Matches: [N]
+    - Definitional Traps: [N]
+    - Cross-Reference Traps: [N]
+    
+    VENDOR & JURISDICTION INTELLIGENCE:
+    [Copy jurisdiction data from document_analyzer output]
+    
+    INDIAN CONTRACT ACT COMPLIANCE:
+    [Copy from compliance_validator output]
+    
+    10XDS COMPANY POLICY COMPLIANCE:
+    [Copy from compliance_validator output]
+    
+    UNIVERSAL NDA CRITERIA ASSESSMENT:
+    [Copy from compliance_validator output]
+    
+    OVERALL RISK ASSESSMENT:
+    [Copy risk calculation from compliance_validator output]
+    
+    RECOMMENDATION:
+    [SIGN AS-IS / NEGOTIATE FIRST / DO NOT SIGN]
+    [2-3 sentences explaining why]
+    
+    RECOMMENDED COUNTER-PROPOSALS:
+    [CRITICAL: Copy ALL proposals from Part 1 with EXACT ---PROPOSAL START/END--- format]
+    [Minimum 5 proposals required]
+    
+    **FORMAT RULES:**
     - NO decorative lines
-    - NO repeated sections
-    - Keep everything concise
-    - Use simple section headers
-    - NEVER use markdown code fences (```)
-    - Write everything in plain text
-    - Ensure risk level EXACTLY matches calculated percentage
+    - NO markdown code fences
+    - Risk level must EXACTLY match percentage
+    - All sections present
+    - Concise and professional
     """,
     llm=llm,
     verbose=False,
     allow_delegation=False,
 )
-
-
-# ✅ REPLACE EXISTING create_tasks FUNCTION WITH THIS ENHANCED VERSION
 
 def create_tasks(document_text: str, risk_criteria: list, regex_flags: dict = None, 
                  definition_analysis: dict = None, cross_ref_map: dict = None) -> list:
-    """Create enhanced task workflow with hidden risk detection."""
+    """
+    TOKEN-OPTIMIZED: Reduces token usage by 50% while maintaining analysis quality.
     
-    # ✅ ADD DEFAULT VALUES if preprocessing data is missing
+    KEY OPTIMIZATION: Only Task 1 receives full document. Task 2 and 3 work from context.
+    """
+    
+    # Provide defaults
     if regex_flags is None:
         regex_flags = {'total_flags': 0, 'flags': [], 'by_category': {}, 'severity_counts': {}}
     
@@ -557,32 +551,11 @@ def create_tasks(document_text: str, risk_criteria: list, regex_flags: dict = No
     
     criteria_text = "\n".join([f"{i+1}. {c}" for i, c in enumerate(risk_criteria)])
     
-    # TASK 1: Parse document
-    parse_task = Task(
-        description=f"""Identify and summarize key clauses in the document.
-        
-DOCUMENT TEXT:
-{document_text}
-
-Extract:
-- Confidentiality obligations and scope
-- Duration and termination terms
-- Liability and penalty clauses
-- Disclosure permissions
-- Jurisdiction and dispute resolution
-- **Vendor/Party details and location**
-- **Governing law clause**
-
-List each with its clause number.""",
-        expected_output="Structured clause summary with clause numbers including jurisdiction details",
-        agent=document_parser
-    )
-    
-    # ✅ TASK 2: Hidden Risk Detection
-    # In create_tasks function, replace the hidden_risk_task with this optimized version:
-
-    hidden_risk_task = Task(
-    description=f"""Analyze the document for hidden, disguised, or cross-referenced risks.
+    # ==========================================
+    # TASK 1: DOCUMENT ANALYSIS (MEGA TASK)
+    # ==========================================
+    document_analysis_task = Task(
+        description=f"""Perform COMPLETE document analysis in ONE pass.
 
 FULL DOCUMENT TEXT:
 {document_text}
@@ -592,340 +565,234 @@ PREPROCESSED INTELLIGENCE:
 2. DEFINITIONS: {json.dumps(definition_analysis, indent=2)}
 3. CROSS-REFS: {json.dumps(cross_ref_map, indent=2)}
 
-CRITICAL: Keep output CONCISE to preserve token budget for counter-proposals.
+JURISDICTION MAPPING: {json.dumps(JURISDICTION_MAPPING, indent=2)}
 
-For each confirmed hidden risk, use this COMPACT format:
+YOUR ANALYSIS MUST INCLUDE ALL 3 SECTIONS:
 
- HIDDEN TRAP #1: [Name]
-Primary Clause: [Clause number only, e.g., "Clause 14" - NO full quote]
-Hidden Mechanism: [Type in 3-5 words]
-How It Works: [1 sentence max, 15-20 words]
-Real Meaning: [1 sentence max, 15-20 words - focus on business impact]
-Severity: [CRITICAL/HIGH/MEDIUM/LOW]
-Detection Method: [Regex/LLM/Definition/Cross-ref]
-Confidence: [0.0-1.0]
+=== SECTION 1: CLAUSE EXTRACTION ===
+Extract and summarize key clauses with clause numbers:
+- Confidentiality obligations and scope
+- Duration and termination terms
+- Liability and penalty clauses
+- Disclosure permissions
+- Jurisdiction and dispute resolution
+- Vendor/Party details and location
+- Governing law clause
 
-RULES FOR BREVITY:
-- NO full clause quotes (just reference clause number)
-- Maximum 2 sentences total per trap
-- Focus on WHAT the risk is, not HOW you found it
-- Prioritize top 5-7 risks only (skip minor LOW risks)
-- Combine similar risks into one entry
+=== SECTION 2: JURISDICTION INTELLIGENCE ===
+Extract ONLY if explicitly stated (use "[Not Specified]" if not found):
+- Vendor name
+- Vendor location/country
+- Governing law clause
+- Jurisdiction clause
+- Vendor classification
+- Compliance level required
+- Jurisdiction risks
 
-PRIORITIZATION (report max 7 traps):
-1. CRITICAL: Combined risks with high business impact
-2. HIGH: Definitional traps + liability issues
-3. MEDIUM: Single-clause risks
-4. Skip LOW severity unless uniquely dangerous
+=== SECTION 3: HIDDEN RISKS ===
+Analyze preprocessed intelligence for hidden traps.
+Use COMPACT format (max 7 risks):
+- Primary Clause: [Clause number only]
+- Hidden Mechanism: [Type in 3-5 words]
+- How It Works: [1 sentence, 15-20 words]
+- Real Meaning: [1 sentence, 15-20 words]
+- Severity: [CRITICAL/HIGH/MEDIUM/LOW]
+
+Provide complete output with all 3 sections clearly separated.
 """,
-    expected_output="Concise hidden risk summary (max 7 risks) with clause references only, no full quotes, max 2 sentences per risk",
-    agent=hidden_clause_detector,
-    context=[parse_task]
-)
-    # TASK 3: Jurisdiction Analysis
-    jurisdiction_task = Task(
-        description=f"""Analyze vendor location and jurisdiction details from the document.
-
-FULL DOCUMENT TEXT:
-{document_text}
-
-JURISDICTION MAPPING DATABASE:
-{json.dumps(JURISDICTION_MAPPING, indent=2)}
-
-Extract and analyze:
-1. Vendor name and registered location/country
-2. Governing law clause
-3. Jurisdiction/dispute resolution clause
-4. Classify vendor (indian_domestic / international_tier1 / international_tier2 / high_risk)
-5. Determine compliance level required (STRICT / MODERATE / BASIC)
-6. Identify any jurisdiction risks
-
-Provide structured output in JSON format showing all extracted details and risk assessment.
-""",
-        expected_output="JSON-formatted vendor and jurisdiction intelligence with risk classification",
-        agent=jurisdiction_analyzer,
-        context=[parse_task]
+        expected_output="Complete document intelligence with clauses, jurisdiction data, and hidden risks",
+        agent=document_analyzer
     )
     
-    # TASK 4: Indian Law Compliance
-    indian_law_task = Task(
-        description=f"""Validate NDA compliance with Indian Contract Act, 1872.
+    # ==========================================
+    # TASK 2: COMPLIANCE VALIDATION (MEGA TASK)
+    # 🔑 KEY OPTIMIZATION: NO DOCUMENT TEXT - Uses context from Task 1
+    # ==========================================
+    compliance_validation_task = Task(
+        description=f"""Perform COMPLETE compliance analysis against ALL frameworks in ONE pass.
 
-FULL DOCUMENT TEXT:
-{document_text}
+⚠️ IMPORTANT: You will receive the COMPLETE DOCUMENT ANALYSIS from the previous task via context.
+This includes:
+- All extracted clauses with clause numbers
+- Jurisdiction intelligence
+- Hidden risks identified
+- Full clause details
+
+DO NOT request the document text - use the clause information provided in context.
+
+UNIVERSAL PROTECTIVE CRITERIA:
+{criteria_text}
 
 INDIAN CONTRACT ACT RULES:
 {json.dumps(INDIAN_LAW_RULES, indent=2)}
 
-Check for:
-1. Section 10 essentials (free consent, consideration, competent parties, lawful object)
-2. Section 27 violations (post-employment non-compete, trade restraints)
-3. Section 73-74 issues (excessive penalties)
-4. Jurisdiction concerns (enforceability in India)
-
-For each check:
-- If COMPLIANT: State "✓ COMPLIANT: [item]" with evidence
-- If VIOLATION: State "✗ VIOLATION: [item]" with severity (BLOCKING/HIGH/MEDIUM) and explanation
-- If RISK: State "⚠ RISK: [item]" with concern
-
-Use the jurisdiction classification from previous task to determine strictness level.
-""",
-        expected_output="Detailed Indian Contract Act compliance report with violations and risks flagged",
-        agent=indian_law_validator,
-        context=[parse_task, jurisdiction_task]
-    )
-    
-    # TASK 5: Company Policy Compliance
-    company_policy_task = Task(
-        description=f"""Validate NDA against 10xds company requirements.
-
-FULL DOCUMENT TEXT:
-{document_text}
-
 10XDS COMPANY REQUIREMENTS:
 {json.dumps(COMPANY_REQUIREMENTS, indent=2)}
 
-Check for:
-1. CRITICAL VIOLATIONS (blocking issues):
+YOUR ANALYSIS MUST INCLUDE ALL 4 DIMENSIONS:
+
+=== DIMENSION 1: INDIAN CONTRACT ACT COMPLIANCE ===
+Using the clauses from context, check:
+- Section 10 essentials (free consent, consideration, competent parties, lawful object)
+- Section 27 violations (post-employment non-compete, trade restraints)
+- Section 73-74 (liquidated damages must be reasonable)
+- Jurisdiction requirements (Indian companies need Indian jurisdiction)
+
+Output:
+- ✅ COMPLIANT items (with evidence from clauses provided)
+- ❌ VIOLATIONS (severity: BLOCKING/HIGH/MEDIUM)
+- ⚠️ RISKS (enforcement concerns)
+
+=== DIMENSION 2: 10XDS COMPANY POLICY COMPLIANCE ===
+Using the clauses from context, check:
+1. CRITICAL VIOLATIONS (BLOCKING):
    - Unlimited liability
    - Perpetual confidentiality without exceptions
    - Automatic IP transfer
    - One-sided termination restrictions
 
-2. MANDATORY PROTECTIONS (must exist):
+2. MANDATORY PROTECTIONS (HIGH if missing):
    - Data protection clause
    - IP ownership clarity
    - Liability cap
    - Termination clause
-   - Return/destruction of information
+   - Return/destruction clause
 
-3. PREFERRED TERMS (negotiable):
-   - NDA duration
-   - Confidentiality period post-termination
-   - Jurisdiction preference
-   - Governing law preference
+3. PREFERRED TERMS (LOW if not met):
+   - NDA duration: 2-3 years
+   - Post-termination confidentiality: 2-3 years
+   - Indian courts/arbitration preferred
 
-For each:
-- If BLOCKING VIOLATION found: Flag as "🚫 BLOCKING: [issue]"
-- If PROTECTION MISSING: Flag as "✗ MISSING: [protection]" with severity
-- If PREFERENCE GAP: Flag as "ℹ PREFERENCE: [item]"
-""",
-        expected_output="10xds policy compliance report categorized by severity",
-        agent=company_policy_validator,
-        context=[parse_task, jurisdiction_task]
-    )
-    
-    # TASK 6: Universal Criteria Evaluation
-    evaluate_task = Task(
-        description=f"""Evaluate the document against universal protective criteria.
+Output:
+- 🚫 BLOCKING VIOLATIONS (recommend DO NOT SIGN)
+- ❌ MISSING PROTECTIONS (with severity)
+- ℹ️ PREFERENCE GAPS (negotiable)
 
-PROTECTIVE CRITERIA:
-{criteria_text}
+=== DIMENSION 3: UNIVERSAL NDA CRITERIA ASSESSMENT ===
+For each criterion in the list above, check against clauses from context:
+- If FOUND: "FOUND: [name] | Clause: [number from context] | Evidence: [brief quote]"
+- If MISSING: "NOT FOUND: [name] | Risk: [explanation]"
 
-FULL DOCUMENT TEXT:
-{document_text}
+Count and verify: F + M = T
 
-For each criterion:
-1. If PROTECTION EXISTS:
-   Format: "FOUND: [criterion name]
-   Clause: [number]
-   Evidence: [brief quote, max 1-2 sentences]"
+=== DIMENSION 4: OVERALL RISK CALCULATION ===
+Calculate risk using weighted points:
+- BLOCKING/CRITICAL = 15 points
+- HIGH = 10 points
+- MEDIUM = 5 points
+- LOW = 2 points
+- Missing protection = 3 points
 
-2. If PROTECTION is MISSING:
-   Format: "NOT FOUND: [criterion name]
-   Risk: [brief explanation, 1 sentence]"
+Risk Percentage = (Total Points / 100) * 100
 
-After checking all criteria:
-COUNT:
-- F = Protections FOUND
-- M = Protections MISSING
-- T = Total criteria
-
-Verify: F + M = T
-
-CALCULATE RISK:
-RISK_PERCENT = (M / T) * 100
-
-Determine Risk Level (STRICT MATCHING):
+Determine Risk Level (STRICT):
 - 0-33%: LOW RISK
 - 34-66%: MODERATE RISK
 - 67-100%: HIGH RISK
+
+Provide complete output with all 4 dimensions clearly separated, including:
+- Point breakdown showing calculation
+- Risk percentage
+- Risk level matching percentage bracket
+- Category breakdown (Hidden risks, Indian law, Company policy, Universal criteria, Jurisdiction)
 """,
-        expected_output="Universal criteria assessment with risk calculation",
-        agent=risk_evaluator,
-        context=[parse_task]
+        expected_output="Complete multi-dimensional compliance analysis with risk calculation",
+        agent=compliance_validator,
+        context=[document_analysis_task]  # ← This passes Task 1 output automatically
     )
     
-    # TASK 7: Consolidated Risk Assessment
-    consolidated_risk_task = Task(
-        description="""Consolidate ALL compliance findings and calculate overall risk.
+    # ==========================================
+    # TASK 3: REPORT GENERATION (MEGA TASK)
+    # ==========================================
+    report_generation_task = Task(
+        description=f"""Generate COMPLETE FINAL REPORT with counter-proposals and analysis.
 
-Combine findings from:
-1. HIDDEN RISKS (regex-validated + definitional + cross-reference traps)
-2. Jurisdiction analysis (enforcement risks)
-3. Indian Contract Act compliance (legal violations)
-4. 10xds company policy compliance (business risks)
-5. Universal NDA criteria (protective coverage)
+⚠️ IMPORTANT: You have access to:
+- Task 1 output: Complete document analysis (clauses, jurisdiction, hidden risks)
+- Task 2 output: Complete compliance validation (all 4 dimensions + risk score)
 
-OVERALL RISK LOGIC:
-- If ANY 🚫 BLOCKING violation exists → Automatic HIGH RISK
-- Otherwise, calculate weighted risk score:
-  * BLOCKING/CRITICAL violations = 10 points each
-  * HIGH severity issues = 3 points each
-  * MEDIUM severity issues = 2 points each
-  * LOW severity issues = 1 point each
-  * Missing protections = 2 points each
+Use this context to build the report. DO NOT request document text.
 
-Risk Level:
-- 0-10 points: LOW RISK
-- 11-25 points: MODERATE RISK
-- 26+ points: HIGH RISK
+CRITICAL: Start IMMEDIATELY with counter-proposals (no preamble).
 
-Provide:
-- Overall risk level and score
-- Category breakdown (Hidden risks / Indian law / Company policy / Universal criteria)
-- Top 3 critical concerns
-- Jurisdiction risk summary
-""",
-        expected_output="Comprehensive risk assessment with weighted scoring across all dimensions",
-        agent=risk_evaluator,
-        context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, company_policy_task, evaluate_task]
-    )
-    
-    # TASK 8: Mitigation Recommendations
-    mitigation_task = Task(
-    description="""
-CRITICAL: Generate counter-proposals in EXACT format below. NO preamble, NO explanations.
+## PART 1: COUNTER-PROPOSALS (START HERE)
 
-START YOUR RESPONSE WITH: ---PROPOSAL START---
-
-FORMAT (MANDATORY):
+Generate counter-proposals for ALL identified issues using EXACT format:
 
 ---PROPOSAL START---
-Name: [Short name]
+Name: [Short name, max 8 words]
 Priority: [BLOCKING|HIGH|MEDIUM|LOW]
-Issue: [Problem statement]
-Clause: [Complete legal text in 2-4 sentences]
-Benefit: [Why this helps]
+Issue: [1 sentence problem statement]
+Clause: [2-4 sentences of legal text]
+Benefit: [1 sentence benefit statement]
 ---PROPOSAL END---
 
-Generate 5-10 proposals for:
-1. Any BLOCKING or CRITICAL issues (Priority: BLOCKING)
-2. All missing mandatory protections (Priority: HIGH)  
-3. All HIGH severity hidden risks (Priority: HIGH)
-4. Key preference gaps (Priority: MEDIUM/LOW)
+Generate 5-8 proposals minimum in priority order:
+1. BLOCKING/CRITICAL issues
+2. Missing mandatory protections
+3. HIGH severity hidden risks
+4. Indian law violations
+5. Company policy gaps
+6. Preference gaps
 
-Based on findings from previous tasks, create counter-proposals that:
-- Address hidden risks detected
-- Fill missing protections gaps
-- Fix Indian law compliance issues
-- Resolve company policy violations
+## PART 2: COMPLETE ANALYSIS REPORT
 
-REMEMBER: Start immediately with ---PROPOSAL START--- with NO preamble.
-""",
-    expected_output="Multiple counter-proposals with ---PROPOSAL START/END--- markers, each containing Name, Priority, Issue, Clause, and Benefit fields",
-    agent=mitigation_advisor,
-    context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, company_policy_task, evaluate_task, consolidated_risk_task]
-)
-    # TASK 9: Final Report
-    report_task = Task(
-        description="""Create the FINAL COMPREHENSIVE REPORT in this structure:
+After proposals, generate structured report:
 
 === LEGAL DOCUMENT RISK ASSESSMENT REPORT ===
 
 EXECUTIVE SUMMARY:
-[2-3 sentences: Overall risk level, main concerns, recommendation]
+[2-3 sentences with risk level and recommendation]
 
 🎭 HIDDEN & DISGUISED RISKS:
-[List all hidden traps found by hidden_clause_detector agent]
-[Format: Use the 🎭 HIDDEN TRAP format with all details]
-[Group by: Definitional Traps / Cross-Reference Traps / Combined Risks]
-[Show detection methodology for each]
+[Copy from document_analysis_task context]
 
 Detection Summary:
 - Total Hidden Risks Found: [N]
-- Regex Matches: [N] (LLM Confirmed: [N], False Positives: [N])
+- Regex Matches: [N]
 - Definitional Traps: [N]
 - Cross-Reference Traps: [N]
-- Combined Risk Multipliers: [List any risks with amplification >2.0]
 
 VENDOR & JURISDICTION INTELLIGENCE:
-Vendor Name: [name]
-Vendor Location: [location/country]
-Vendor Classification: [indian_domestic / international_tier1 / etc.]
-Governing Law: [law]
-Jurisdiction: [jurisdiction clause]
-Compliance Level Required: [STRICT / MODERATE / BASIC]
-Jurisdiction Risks: [list risks if any]
+[Copy from document_analysis_task context]
 
 INDIAN CONTRACT ACT COMPLIANCE:
-✓ Compliant Items:
-[List items that comply with Indian Contract Act]
-
-✗ Violations Found:
-[List violations with severity: BLOCKING/HIGH/MEDIUM]
-
-⚠ Risks Identified:
-[List enforcement or legal risks]
+[Copy from compliance_validation_task context]
 
 10XDS COMPANY POLICY COMPLIANCE:
-🚫 Blocking Violations:
-[List any blocking issues - if present, recommend DO NOT SIGN]
-
-✗ Missing Mandatory Protections:
-[List missing protections with severity]
-
-ℹ Preference Gaps:
-[List negotiable preference items]
+[Copy from compliance_validation_task context]
 
 UNIVERSAL NDA CRITERIA ASSESSMENT:
-Protections Found: [F] out of [T]
-Protections Missing: [M] out of [T]
-[Brief list of key missing protections]
+[Copy from compliance_validation_task context]
 
 OVERALL RISK ASSESSMENT:
-Risk Score: [X] points
-Risk Percentage: [Y]%
-Risk Level: [LOW RISK / MODERATE RISK / HIGH RISK]
-
-Category Breakdown:
-- Hidden Risks: [issues count]
-- Indian Law Compliance: [issues count]
-- Company Policy Compliance: [issues count]
-- Universal Criteria: [missing count]
-- Jurisdiction Risks: [risks count]
+[Copy risk calculation from compliance_validation_task context]
 
 RECOMMENDATION:
 [SIGN AS-IS / NEGOTIATE FIRST / DO NOT SIGN]
-[2-3 sentences explaining why, highlighting top concerns]
+[2-3 sentences explaining why]
 
 RECOMMENDED COUNTER-PROPOSALS:
-[List all modifications in priority order with Priority levels]
+[CRITICAL: Copy ALL proposals from Part 1 with EXACT ---PROPOSAL START/END--- format]
+[Minimum 5 proposals required]
 
-CRITICAL RULES:
-- NO decorative lines
+**FORMAT RULES:**
 - NO markdown code fences
-- Risk level in summary MUST match calculated percentage
-- Ensure all sections are present
-- Keep concise and professional
+- Risk level must EXACTLY match percentage
+- All sections present
+- Concise and professional
 """,
-        expected_output="Complete formatted report with all compliance dimensions including hidden risks",
+        expected_output="Complete formatted report with counter-proposals in ---PROPOSAL START/END--- format and all analysis sections",
         agent=report_generator,
-        context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, company_policy_task, evaluate_task, consolidated_risk_task, mitigation_task]
+        context=[document_analysis_task, compliance_validation_task]  # ← Access to both previous outputs
     )
     
-    # ✅ RETURN ALL TASKS
     return [
-        parse_task,
-        hidden_risk_task,
-        jurisdiction_task,
-        indian_law_task,
-        company_policy_task,
-        evaluate_task,
-        consolidated_risk_task,
-        mitigation_task,
-        report_task
+        document_analysis_task,
+        compliance_validation_task,
+        report_generation_task
     ]
+
 
 
 
@@ -1014,32 +881,37 @@ def analyze_document(file_path: str, criteria: list) -> dict:
     )
 
     crew = Crew(
-        agents=[
-            document_parser,
-            hidden_clause_detector,   # ✅ NEW AGENT ADDED
-            jurisdiction_analyzer,
-            indian_law_validator,
-            company_policy_validator,
-            risk_evaluator,
-            mitigation_advisor,
-            report_generator
-        ],
-        tasks=tasks,
-        verbose=False,
-        process="sequential",
-        max_execution_time=600
-    )
+    agents=[
+        document_analyzer,      # Agent 1: Mega analysis agent
+        compliance_validator,   # Agent 2: Mega compliance agent
+        report_generator        # Agent 3: Mega report agent
+    ],
+    tasks=tasks,  # Now only 3 tasks instead of 9
+    verbose=False,
+    process="sequential",
+    max_execution_time=600
+)
 
     # Run agents
     result = crew.kickoff()
     final_output = getattr(result, 'output', str(result))
-    logger.info(f" LLM OUTPUT LENGTH: {len(final_output)} characters")
-    logger.info(f" OUTPUT PREVIEW (last 500 chars):\n{final_output[-500:]}")
+    debug_file = Path("debug_llm_output.txt")
+    with open(debug_file, 'w', encoding='utf-8') as f:
+        f.write("=== FULL LLM OUTPUT ===\n\n")
+        f.write(final_output)
+        f.write("\n\n=== END OUTPUT ===")
+    logger.info(f"📝 Saved raw LLM output to {debug_file}")
 
-# Check if output was truncated
-    if "COUNTER-PROPOSALS" in final_output.upper() and "Modification" not in final_output:
-        logger.error(" CRITICAL: Counter-proposals section exists but no proposals found!")
-        logger.error("Likely cause: LLM output truncated due to token limits")
+    # Check if counter-proposals section exists
+    if "RECOMMENDED COUNTER-PROPOSALS" in final_output:
+        # Extract just the counter-proposals section for analysis
+        proposals_start = final_output.find("RECOMMENDED COUNTER-PROPOSALS")
+        proposals_section = final_output[proposals_start:proposals_start+2000]
+        logger.info(f"📋 Counter-proposals section preview:\n{proposals_section}")
+    else:
+        logger.error("❌ No counter-proposals section found in LLM output!")
+        logger.error(f"Output length: {len(final_output)} chars")
+        logger.error(f"Last 500 chars: {final_output[-500:]}")
 
 
     print("\n" + "=" * 60)
@@ -1059,6 +931,7 @@ def analyze_document(file_path: str, criteria: list) -> dict:
         definition_analysis,   # NEW
         cross_ref_map          # NEW
     )
+    json_data = validate_and_fix_risk_level(json_data)
 
     # ==========================================
     # 🔍 STEP 4 — Validate JSON
@@ -1227,14 +1100,18 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     current_trap = None
     trap_number = 0
 
+    # Updated end markers to be more precise
     END_MARKERS = [
-        "DETECTION SUMMARY",
+        "DETECTION SUMMARY:",
         "VENDOR & JURISDICTION",
         "INDIAN CONTRACT ACT",
         "10XDS COMPANY",
         "UNIVERSAL NDA",
-        "COUNTER-PROPOSALS"
+        "COUNTER-PROPOSALS",
+        "RECOMMENDED COUNTER"
     ]
+
+    logger.info("🔍 Starting hidden risks extraction...")
 
     for i, raw_line in enumerate(lines):
         stripped = raw_line.strip()
@@ -1242,17 +1119,19 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             continue
         upper = stripped.upper()
 
-        # Start hidden section
+        # ===== START HIDDEN SECTION =====
         if not in_hidden_section:
             if "HIDDEN" in upper and ("RISK" in upper or "TRAP" in upper):
                 in_hidden_section = True
-                logger.info(f"  Line {i}: Hidden Risks section started")
-
-                # handle header that contains trap on same line
+                logger.info(f"  ✅ Line {i}: Hidden Risks section started")
+                
+                # Check if trap starts on same line as header
                 trap_match = re.search(r'HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
                 if trap_match:
                     trap_number = int(trap_match.group(1))
                     trap_name = trap_match.group(2).strip()
+                    # Remove "Name:" prefix if present
+                    trap_name = re.sub(r'^Name:\s*', '', trap_name, flags=re.IGNORECASE)
                     current_trap = {
                         'name': trap_name,
                         'primary_clause': '',
@@ -1260,29 +1139,35 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                         'real_meaning': '',
                         'severity': ''
                     }
+                    logger.info(f"    🎭 Found trap on header line: {trap_name}")
                 continue
 
-        # End hidden section
-        if in_hidden_section and any(marker in upper for marker in END_MARKERS):
-            if current_trap and current_trap.get('name'):
-                hidden_risks.append(current_trap)
-                logger.info(f"  Line {i}: Final trap saved")
-            logger.info(f"  Line {i}: Hidden Risks section ended")
-            break
-
-        # Inside hidden section
+        # ===== END HIDDEN SECTION =====
         if in_hidden_section:
-
-            # New trap header detection (own line)
-            trap_match = re.search(r'HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
-            if trap_match:
-                # save previous
+            # Check if we've reached the end
+            if any(marker in upper for marker in END_MARKERS):
                 if current_trap and current_trap.get('name'):
                     hidden_risks.append(current_trap)
-                    logger.info(f"  Trap #{trap_number} saved")
+                    logger.info(f"  ✅ Saved final trap: {current_trap['name']}")
+                logger.info(f"  🛑 Line {i}: Hidden Risks section ended")
+                break
 
+        # ===== PARSE TRAP CONTENT =====
+        if in_hidden_section:
+            
+            # Check for new trap starting (either with ** or without)
+            trap_match = re.search(r'\*?\*?HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
+            if trap_match:
+                # Save previous trap
+                if current_trap and current_trap.get('name'):
+                    hidden_risks.append(current_trap)
+                    logger.info(f"  ✅ Saved trap #{trap_number}: {current_trap['name']}")
+                
                 trap_number = int(trap_match.group(1))
                 trap_name = trap_match.group(2).strip()
+                # Remove "Name:" prefix if present
+                trap_name = re.sub(r'^Name:\s*', '', trap_name, flags=re.IGNORECASE)
+                
                 current_trap = {
                     'name': trap_name,
                     'primary_clause': '',
@@ -1290,53 +1175,55 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     'real_meaning': '',
                     'severity': ''
                 }
+                logger.info(f"    🎭 New trap #{trap_number}: {trap_name}")
                 continue
 
-            # parse fields for current trap
+            # Parse trap fields
             if current_trap:
+                
+                # Name field (if separate line)
+                if stripped.startswith("Name:"):
+                    name = stripped.replace("Name:", "", 1).strip()
+                    if name and not current_trap.get('name'):
+                        current_trap['name'] = name
+                        logger.info(f"      📝 Name: {name}")
+                    continue
 
-                # Primary Clause (short / single-line format)
+                # Primary Clause
                 if stripped.startswith("Primary Clause:"):
                     content = stripped.replace("Primary Clause:", "", 1).strip()
-                    # append if already exists (handles multiple lines if any)
-                    if current_trap.get('primary_clause'):
-                        current_trap['primary_clause'] += " " + content
-                    else:
-                        current_trap['primary_clause'] = content
-
-                    # extract clause number if present
-                    clause_num_match = re.search(r'Clause\s+(\d+[A-Za-z]?)', content, re.IGNORECASE)
-                    if clause_num_match:
-                        current_trap['clause_number'] = clause_num_match.group(1)
-
-                    logger.info("    Primary Clause parsed")
+                    current_trap['primary_clause'] = content
+                    
+                    # Extract clause number
+                    clause_match = re.search(r'Clause\s+(\d+[A-Za-z]?)', content, re.IGNORECASE)
+                    if clause_match:
+                        current_trap['clause_number'] = clause_match.group(1)
+                    
+                    logger.info(f"      📄 Primary Clause: {content[:50]}...")
                     continue
 
                 # Real Meaning / Real Impact
                 if re.match(r'^Real (Meaning|Impact)', stripped, re.IGNORECASE):
                     content = re.sub(r'^Real (Meaning|Impact)[:\s]*', '', stripped, flags=re.IGNORECASE).strip()
-                    # append if already exists
-                    if current_trap.get('real_meaning'):
-                        current_trap['real_meaning'] += " " + content
-                    else:
-                        current_trap['real_meaning'] = content
-                    logger.info("    Real Meaning parsed")
+                    current_trap['real_meaning'] = content
+                    logger.info(f"      💡 Real Meaning: {content[:50]}...")
                     continue
 
                 # Severity
                 if stripped.startswith("Severity:"):
                     severity_raw = stripped.replace("Severity:", "", 1).strip()
+                    # Remove any parenthetical notes
                     severity_clean = re.sub(r'\s*\(.*?\)\s*', '', severity_raw).strip()
                     current_trap['severity'] = severity_clean
-                    logger.info("    Severity parsed")
+                    logger.info(f"      ⚠️ Severity: {severity_clean}")
                     continue
 
-    # Save last trap if present
+    # Save last trap if exists
     if current_trap and current_trap.get('name'):
         hidden_risks.append(current_trap)
-        logger.info(f"  Last trap #{trap_number} saved")
+        logger.info(f"  ✅ Saved last trap: {current_trap['name']}")
 
-    # Deduplicate based on clause number or clause snippet
+    # ===== DEDUPLICATION =====
     seen_clauses = set()
     deduplicated_risks = []
     for risk in hidden_risks:
@@ -1348,8 +1235,10 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             logger.info(f"  Duplicate removed: {risk.get('name', '<unnamed>')}")
 
     hidden_risks = deduplicated_risks
-    logger.info(f"  Final Hidden Risks Extracted: {len(hidden_risks)}")
-
+    
+    logger.info(f" FINAL: Extracted {len(hidden_risks)} hidden risks")
+    for idx, risk in enumerate(hidden_risks, 1):
+        logger.info(f"  {idx}. {risk.get('name', 'Unknown')} - {risk.get('severity', 'N/A')}")
 
 
 
@@ -1613,188 +1502,109 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # COUNTER PROPOSALS - FIXED PARSING
     # ============================
     counter_proposals = []
-    in_counter = False
-    current = None
-    collecting = None
 
-    # More flexible regex patterns
-    mod_header = re.compile(
-        r'^(?:Modification\s*#?)?\s*(\d+)[\.:]?\s*(.+?)(?:\s*\((HIGH|MEDIUM|LOW|BLOCKING)\s+PRIORITY\))?$',
-        re.IGNORECASE
-    )
-    mod_header_alt = re.compile(
-        r'^(?:\d+[\)\.]\s*)?(.+?)\s*(?:-\s*(HIGH|MEDIUM|LOW|BLOCKING)\s+PRIORITY)?$',
-        re.IGNORECASE
+    # Method 1: Parse strict marker format (---PROPOSAL START/END---)
+    full_text = '\n'.join(lines)
+    proposal_blocks = re.findall(
+        r'---PROPOSAL START---\s*(.*?)\s*---PROPOSAL END---',
+        full_text,
+        re.DOTALL | re.IGNORECASE
     )
 
-    suggested_start = re.compile(r'^SUGGESTED CLAUSE\s*\(START\)\s*:?\s*$', re.IGNORECASE)
-    suggested_end = re.compile(r'^SUGGESTED CLAUSE\s*\(END\)\s*:?\s*$', re.IGNORECASE)
+    logger.info(f"🔍 Found {len(proposal_blocks)} proposals with markers")
 
-    one_line_clause = re.compile(r'^(Suggested Clause|Clause)\s*:\s*(.+)$', re.IGNORECASE)
-    current_issue_re = re.compile(r'^Current Issue\s*:\s*(.+)$', re.IGNORECASE)
-    benefit_re = re.compile(r'^Benefit\s*:\s*(.+)$', re.IGNORECASE)
-    priority_re = re.compile(r'^Priority\s*:\s*(HIGH|MEDIUM|LOW|BLOCKING)$', re.IGNORECASE)
+    for idx, block in enumerate(proposal_blocks):
+        try:
+            proposal = {}
+            # Parse each field
+            name_match = re.search(r'Name:\s*(.+)', block, re.IGNORECASE)
+            priority_match = re.search(r'Priority:\s*(BLOCKING|HIGH|MEDIUM|LOW)', block, re.IGNORECASE)
+            issue_match = re.search(r'Issue:\s*(.+?)(?=Clause:|$)', block, re.DOTALL | re.IGNORECASE)
+            clause_match = re.search(r'Clause:\s*(.+?)(?=Benefit:|$)', block, re.DOTALL | re.IGNORECASE)
+            benefit_match = re.search(r'Benefit:\s*(.+)', block, re.DOTALL | re.IGNORECASE)
+            
+            if name_match and priority_match:
+                proposal['name'] = name_match.group(1).strip()
+                proposal['priority'] = priority_match.group(1).upper()
+                proposal['current_issue'] = issue_match.group(1).strip() if issue_match else "Issue not specified"
+                proposal['suggested_clause'] = clause_match.group(1).strip() if clause_match else "Clause not specified"
+                proposal['benefit'] = benefit_match.group(1).strip() if benefit_match else "Benefit not specified"
+                
+                counter_proposals.append(proposal)
+                logger.info(f"✅ Parsed proposal {idx+1}: {proposal['name'][:50]}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to parse proposal block {idx+1}: {e}")
 
-    logger.info("🔍 Starting counter-proposals parsing...")
-
-    for idx, raw in enumerate(lines):
-        txt = raw.strip()
-
-        # Start counter-proposals section
-        if not in_counter:
+    # Method 2: Fallback to list-based parsing if markers failed
+    if len(counter_proposals) == 0:
+        logger.warning("⚠️ Marker-based parsing failed, trying fallback method...")
+        
+        in_counter = False
+        for line in lines:
+            txt = line.strip()
+            
+            # Start section
             if "RECOMMENDED COUNTER-PROPOSALS" in txt.upper():
                 in_counter = True
-                logger.info(f"✅ Line {idx}: Started counter-proposals section")
-            continue
-
-        # End counter-proposals section
-        if txt.startswith("===") or "OVERALL RISK" in txt.upper():
-            if current:
-                # Clean up fields before saving
-                for f in ["current_issue", "benefit", "suggested_clause"]:
-                    if current.get(f):
-                        current[f] = current[f].strip()
-                counter_proposals.append(current)
-                logger.info(f"✅ Saved final proposal: {current.get('name', 'Unknown')[:50]}")
-            break
-
-        # Detect new modification header
-        m = mod_header.match(txt)
-        if m:
-            # Save previous proposal
-            if current:
-                for f in ["current_issue", "benefit", "suggested_clause"]:
-                    if current.get(f):
-                        current[f] = current[f].strip()
-                counter_proposals.append(current)
-                logger.info(f"✅ Saved proposal: {current.get('name', 'Unknown')[:50]}")
-
-            # Start new proposal
-            name = m.group(2).strip()
-            pr = m.group(3).upper() if m.group(3) else "MEDIUM"
-            current = {
-                "name": name,
-                "priority": pr,
-                "current_issue": None,
-                "benefit": None,
-                "suggested_clause": None
-            }
-            collecting = None
-            logger.info(f"📋 Line {idx}: New proposal - {name[:50]}")
-            continue
-
-        # Try alternative header format if no current proposal yet
-        if current is None:
-            m2 = mod_header_alt.match(txt)
-            if m2:
-                name = m2.group(1).strip()
-                pr = m2.group(2).upper() if m2.group(2) else "MEDIUM"
-                current = {
-                    "name": name,
-                    "priority": pr,
-                    "current_issue": None,
-                    "benefit": None,
-                    "suggested_clause": None
-                }
-                logger.info(f"📋 Line {idx}: New proposal (alt format) - {name[:50]}")
                 continue
+            
+            # End section
+            if txt.startswith("===") and in_counter:
+                break
+            
+            if in_counter:
+                # Match: "- Priority: HIGH - Name: Description"
+                match = re.match(r'[-*]?\s*Priority:\s*(BLOCKING|HIGH|MEDIUM|LOW)\s*[-–]\s*(.+?):\s*(.+)', txt, re.IGNORECASE)
+                if match:
+                    proposal = {
+                        'name': match.group(2).strip(),
+                        'priority': match.group(1).upper(),
+                        'current_issue': match.group(3).strip(),
+                        'suggested_clause': "Add appropriate clause language based on issue description.",
+                        'benefit': "Addresses identified compliance gap."
+                    }
+                    counter_proposals.append(proposal)
+                    logger.info(f"✅ Fallback parsed: {proposal['name'][:50]}")
 
-        if current is None:
-            continue
+    logger.info(f"📊 TOTAL COUNTER-PROPOSALS PARSED: {len(counter_proposals)}")
 
-        # Detect Suggested Clause (START)
-        if suggested_start.match(txt):
-            collecting = "suggested_clause"
-            current["suggested_clause"] = ""
-            logger.info(f"  → Line {idx}: Clause START marker")
-            continue
-
-        # Detect Suggested Clause (END)
-        if suggested_end.match(txt):
-            collecting = None
-            if current["suggested_clause"]:
-                current["suggested_clause"] = current["suggested_clause"].strip()
-                logger.info(f"  → Line {idx}: Clause END marker ({len(current['suggested_clause'])} chars)")
-            continue
-
-        # One-line clause format
-        ol = one_line_clause.match(txt)
-        if ol:
-            current["suggested_clause"] = ol.group(2).strip()
-            collecting = None
-            logger.info(f"  → Line {idx}: One-line clause captured")
-            continue
-
-        # Collect multi-line clause text
-        if collecting == "suggested_clause":
-            if txt == "":
-                current["suggested_clause"] += "\n\n"
-            else:
-                if current["suggested_clause"]:
-                    current["suggested_clause"] += "\n" + txt
-                else:
-                    current["suggested_clause"] = txt
-            continue
-
-        # Parse other fields
-        ci = current_issue_re.match(txt)
-        if ci:
-            current["current_issue"] = ci.group(1).strip()
-            logger.info(f"  → Line {idx}: Current Issue captured")
-            continue
-
-        b = benefit_re.match(txt)
-        if b:
-            current["benefit"] = b.group(1).strip()
-            logger.info(f"  → Line {idx}: Benefit captured")
-            continue
-
-        p = priority_re.match(txt)
-        if p:
-            current["priority"] = p.group(1).upper()
-            logger.info(f"  → Line {idx}: Priority = {current['priority']}")
-            continue
-
-    logger.info(f"✅ COUNTER-PROPOSALS PARSED: {len(counter_proposals)} total")
-
-    # Validation and error handling
+    # Final validation and error handling
     if len(counter_proposals) == 0:
-        logger.error("❌ CRITICAL: No counter-proposals generated!")
+        logger.error("❌ CRITICAL: No counter-proposals could be parsed!")
         
-        # Check if output contained proposals but parsing failed
+        # Check if section exists at all
         proposals_section_exists = any("COUNTER" in line and "PROPOSAL" in line for line in lines)
         
         if proposals_section_exists:
-            logger.error("⚠️ Proposals section exists but parsing FAILED - check format")
+            # Section exists but parsing failed - provide helpful error
+            counter_proposals = [{
+                "name": "Counter-Proposals Parsing Error",
+                "priority": "HIGH",
+                "current_issue": "Counter-proposals were generated but could not be parsed. The LLM output format may not match expected structure. Check analysis_debug.log for raw output.",
+                "suggested_clause": "Review the complete analysis report section 'RECOMMENDED COUNTER-PROPOSALS' for the generated recommendations. Consider regenerating the analysis or contact support.",
+                "benefit": "Ensures all identified risks have corresponding mitigation strategies."
+            }]
         else:
-            logger.error("⚠️ LLM did not generate counter-proposals section at all")
-        
-        # Add fallback error proposal
-        counter_proposals = [{
-            "name": "Counter-Proposals Generation Failed",
-            "priority": "HIGH",
-            "current_issue": (
-                "The AI system did not generate counter-proposals. This may be due to: "
-                "(1) Token limit reached, (2) Complex document analysis, or (3) Parsing error. "
-                "Check debug_llm_output.txt for the raw output."
-            ),
-            "suggested_clause": (
-                "Please try again with a shorter document or contact support. "
-                "Review the analysis_debug.log file for detailed error information."
-            ),
-            "benefit": "N/A - Error condition"
-        }]
+            # No section generated at all - token limit issue
+            counter_proposals = [{
+                "name": "Counter-Proposals Generation Failed",
+                "priority": "HIGH",
+                "current_issue": "The AI system did not generate counter-proposals. This may be due to: (1) Token limit reached during analysis, (2) Document too complex, or (3) LLM timeout. Check debug_llm_output.txt for details.",
+                "suggested_clause": "Please try with a shorter document (under 5 pages recommended) or split analysis into multiple sessions. Contact support if issue persists.",
+                "benefit": "N/A - Error condition requires resolution"
+            }]
     else:
-        # Validate each proposal has required fields
-        valid_proposals = []
-        for cp in counter_proposals:
-            if not cp.get("suggested_clause"):
-                logger.warning(f"⚠️ WARNING: '{cp['name']}' missing clause text!")
-                cp["suggested_clause"] = "[Clause text not generated - please regenerate report]"
-            valid_proposals.append(cp)
-        
-        counter_proposals = valid_proposals
-        logger.info(f"📊 Valid proposals: {len(counter_proposals)}")
+        # Validate all proposals have required fields
+        for idx, cp in enumerate(counter_proposals):
+            if not cp.get('suggested_clause') or cp['suggested_clause'] == "Clause not specified":
+                logger.warning(f"⚠️ Proposal '{cp['name']}' missing clause text - adding placeholder")
+                cp['suggested_clause'] = f"[Detailed clause language to be provided - addresses: {cp.get('current_issue', 'issue not specified')}]"
+            
+            if not cp.get('current_issue'):
+                cp['current_issue'] = "Issue requires further analysis"
+            
+            if not cp.get('benefit'):
+                cp['benefit'] = "Mitigates identified compliance or legal risk"
 
     
     
@@ -1862,12 +1672,12 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             "analysis_version": "3.0-hidden-risk-detection"
         },
         "summary": summary,
-        "hidden_risks_detected": hidden_risks,  # ← Contains all detected risks
+        "hidden_risks_detected": hidden_risks,  # ← This now works!
         "detection_methodology": {
             "regex_matches": regex_flags['total_flags'] if regex_flags else 0,
             "llm_confirmed": len(hidden_risks),
-            "false_positives_filtered": (
-                regex_flags['total_flags'] - len(hidden_risks) if regex_flags else 0
+            "false_positives_filtered": max(0, 
+                (regex_flags['total_flags'] - len(hidden_risks)) if regex_flags else 0
             ),
             "definition_traps_found": len(
                 [r for r in hidden_risks if 'definition' in r.get('name', '').lower()]
@@ -1887,10 +1697,65 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     }
 
 
+def validate_and_fix_risk_level(json_data: dict) -> dict:
+    """
+    Ensures risk_level matches risk_percentage using strict thresholds.
+    Fixes any LLM hallucinations or override errors.
+    """
+    risk_assessment = json_data.get('risk_assessment', {})
+    
+    # Extract percentage (try multiple field names)
+    risk_percentage = (
+        risk_assessment.get('risk_percentage') or 
+        risk_assessment.get('risk_score') or 
+        0
+    )
+    
+    # Convert to int
+    try:
+        risk_percentage = int(float(risk_percentage))
+    except (ValueError, TypeError):
+        logger.warning(f"Invalid risk percentage: {risk_percentage}, defaulting to 50")
+        risk_percentage = 50
+    
+    # Calculate correct risk level using strict thresholds
+    if risk_percentage <= 33:
+        correct_risk_level = "LOW RISK"
+    elif risk_percentage <= 66:
+        correct_risk_level = "MODERATE RISK"
+    else:
+        correct_risk_level = "HIGH RISK"
+    
+    # Get current risk level
+    current_risk_level = risk_assessment.get('risk_level', '')
+    
+    # Fix if mismatch
+    if current_risk_level != correct_risk_level:
+        logger.warning(
+            f"Risk level mismatch detected! "
+            f"Percentage: {risk_percentage}% → Should be {correct_risk_level}, "
+            f"but LLM returned {current_risk_level}. Correcting..."
+        )
+        risk_assessment['risk_level'] = correct_risk_level
+        risk_assessment['_corrected'] = True
+        risk_assessment['_original_level'] = current_risk_level
+    
+    # Ensure both fields exist
+    risk_assessment['risk_percentage'] = risk_percentage
+    risk_assessment['risk_level'] = correct_risk_level
+    
+    json_data['risk_assessment'] = risk_assessment
+    
+    logger.info(
+        f"✅ Risk validation complete: {risk_percentage}% = {correct_risk_level}"
+    )
+    
+    return json_data
+
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index1.html')
 
 
 
@@ -2108,6 +1973,6 @@ def debug_last_analysis():
 
     
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='127.0.0.1', port=5000)
 
 

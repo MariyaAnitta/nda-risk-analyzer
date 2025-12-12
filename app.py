@@ -765,9 +765,9 @@ For each:
     
     # TASK 6: Universal Criteria Evaluation
     evaluate_task = Task(
-        description=f"""Evaluate the document against universal protective criteria.
+    description=f"""Evaluate the document against universal protective criteria.
 
-PROTECTIVE CRITERIA:
+PROTECTIVE CRITERIA ({len(risk_criteria)} total):  # ✅ FIXED
 {criteria_text}
 
 FULL DOCUMENT TEXT:
@@ -787,22 +787,22 @@ After checking all criteria:
 COUNT:
 - F = Protections FOUND
 - M = Protections MISSING
-- T = Total criteria
+- T = Total criteria ({len(risk_criteria)})  # ✅ FIXED
 
-Verify: F + M = T
+Verify: F + M = {len(risk_criteria)}  # ✅ FIXED
 
 CALCULATE RISK:
-RISK_PERCENT = (M / T) * 100
+RISK_PERCENT = (M / {len(risk_criteria)}) * 100  # ✅ FIXED
 
 Determine Risk Level (STRICT MATCHING):
 - 0-33%: LOW RISK
 - 34-66%: MODERATE RISK
 - 67-100%: HIGH RISK
 """,
-        expected_output="Universal criteria assessment with risk calculation",
-        agent=risk_evaluator,
-        context=[parse_task]
-    )
+    expected_output="Universal criteria assessment with risk calculation",
+    agent=risk_evaluator,
+    context=[parse_task]
+)
     
     # TASK 7: Consolidated Risk Assessment
     consolidated_risk_task = Task(
@@ -961,7 +961,10 @@ INDIAN CONTRACT ACT COMPLIANCE:
 UNIVERSAL NDA CRITERIA ASSESSMENT:
 Protections Found: [F] out of [T]
 Protections Missing: [M] out of [T]
-[Brief list of key missing protections]
+1. [First missing protection name]
+2. [Second missing protection name]
+3. [etc...]
+FORMAT: Use NUMBERED LIST (1. 2. 3.) for missing protections, NOT bullet points (-)
 
 OVERALL RISK ASSESSMENT:
 Risk Score: [X] points
@@ -997,7 +1000,6 @@ CRITICAL RULES:
     context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, 
              company_policy_task, evaluate_task, consolidated_risk_task, mitigation_task]
 )
-
     # ✅ RETURN ALL TASKS
     return [
         parse_task,
@@ -1612,14 +1614,13 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # First, extract the counts from the report
     found_count = 0
     missing_count = 0
-    total_count = 10  # Default to 10 universal criteria
-
+    total_count = len(criteria) 
     for line in lines:
         if "Protections Found:" in line and "out of" in line:
             match = re.search(r'(\d+)\s+out of\s+(\d+)', line)
             if match:
                 found_count = int(match.group(1))
-                total_count = int(match.group(2))
+                total_count = int(match.group(2))  # This should match len(criteria)
                 missing_count = total_count - found_count
                 logger.info(f"📊 Protections: {found_count} found, {missing_count} missing, {total_count} total")
                 break
@@ -1685,8 +1686,9 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         # === PARSE MISSING PROTECTIONS ===
         if in_missing and stripped:
-            # New missing item
-            if (re.match(r'^\d+\.', stripped) or 
+            
+            if (re.match(r'^[-•\*]\s+', stripped) or          # "- Item" or "• Item" or "* Item"
+                re.match(r'^\d+\.', stripped) or               # "1. Item"
                 stripped.startswith("✗") or 
                 stripped.startswith("NOT FOUND:")):
 
@@ -1694,13 +1696,17 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     protections_missing.append(current_item)
                     logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
 
-                name = re.sub(r'^[\d\.\s✗]+|^NOT FOUND:\s*', "", stripped)
-                current_item = {"name": name, "risk": None}
+                
+                name = re.sub(r'^[-•\*\d\.\s✗]+|^NOT FOUND:\s*', "", stripped).strip()
+                
+                if name:  # ✅ Only create item if name is non-empty
+                    current_item = {"name": name, "risk": None}
+                    logger.info(f"    → Extracted missing protection: {name[:50]}")
 
-            # Risk line
+            # Risk line (optional sub-field)
             elif current_item and "Risk:" in stripped:
                 current_item["risk"] = stripped.split("Risk:", 1)[1].strip()
-
+                logger.info(f"    → Added risk: {current_item['risk'][:50]}")
     # === FALLBACK: Use counts if parsing failed ===
     if len(protections_found) == 0 and found_count > 0:
         logger.warning(f"⚠️ Parsing failed - using count-based fallback for {found_count} found protections")
@@ -1889,11 +1895,12 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # ============================
     return {
         "metadata": {
-            "document_path": document_path,
-            "analysis_date": datetime.now().isoformat(),
-            "criteria": criteria,
-            "analysis_version": "3.0-hidden-risk-detection"
-        },
+        "document_path": document_path,
+        "analysis_date": datetime.now().isoformat(),
+        "criteria": criteria,  # ← This should contain the EDITED criteria
+        "total_criteria_count": len(criteria),  # ← ADD THIS
+        "analysis_version": "3.0-hidden-risk-detection"
+    },
         "summary": summary,
         "hidden_risks_detected": hidden_risks,  # ← This now works!
         "detection_methodology": {
@@ -1986,7 +1993,9 @@ def index():
 @app.route('/analyze', methods=['POST'])
 def analyze():
     try:
-        # Check if file was uploaded
+        # =====================================================
+        # 1. FILE VALIDATION
+        # =====================================================
         if 'document' not in request.files:
             return jsonify({'error': 'No file uploaded'}), 400
         
@@ -2001,25 +2010,59 @@ def analyze():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
+
+        # =====================================================
+        # 2. UNIVERSAL + CUSTOM CRITERIA HANDLING (UPDATED & DEDUPED)
+        # =====================================================
+
+        # Get edited default criteria from frontend
+        edited_default_criteria = request.form.get('default_criteria', '').strip()
         
-        # Handle criteria properly
+        if edited_default_criteria:
+            universal_criteria = [
+                c.strip() for c in edited_default_criteria.split('\n') if c.strip()
+            ]
+            logger.info(f"Using {len(universal_criteria)} EDITED universal criteria from user")
+        else:
+            universal_criteria = load_universal_criteria()
+            logger.info(f"Using {len(universal_criteria)} DEFAULT universal criteria from JSON")
+
+        # Additional Custom Criteria
         custom_criteria_text = request.form.get('criteria', '').strip()
-        
-        # Load universal criteria as default
-        universal_criteria = load_universal_criteria()
-        
+
         if custom_criteria_text:
-            custom_criteria = [c.strip() for c in custom_criteria_text.split('\n') if c.strip()]
+            custom_criteria = [
+                c.strip() for c in custom_criteria_text.split('\n') if c.strip()
+            ]
+
             all_criteria = universal_criteria.copy()
+
+            # Remove duplicates safely (case-insensitive)
             for custom in custom_criteria:
-                if custom not in all_criteria:
+                custom_norm = custom.lower().strip()
+
+                is_duplicate = any(
+                    str(u).lower().strip() == custom_norm
+                    for u in universal_criteria
+                )
+
+                if not is_duplicate:
                     all_criteria.append(custom)
-            logger.info(f"Using {len(universal_criteria)} universal + {len(custom_criteria)} custom = {len(all_criteria)} total criteria")
+                    logger.info(f"Added custom criteria: {custom[:50]}")
+                else:
+                    logger.info(f"Skipped duplicate custom: {custom[:50]}")
+
+            logger.info(
+                f"Total: {len(universal_criteria)} universal + "
+                f"{len(custom_criteria)} custom (deduped) = {len(all_criteria)}"
+            )
         else:
             all_criteria = universal_criteria
-            logger.info(f"Using {len(all_criteria)} universal criteria (no custom criteria provided)")
-        
-        # Normalize criteria to strings
+            logger.info(f"Using ONLY {len(all_criteria)} universal criteria (no custom)")
+
+        # =====================================================
+        # 3. NORMALIZE CRITERIA
+        # =====================================================
         normalized_criteria = []
         for item in all_criteria:
             if isinstance(item, dict):
@@ -2029,24 +2072,24 @@ def analyze():
                 normalized_criteria.append(f"[{priority}] {category}: {description}")
             else:
                 normalized_criteria.append(str(item))
-        
+
         if not normalized_criteria:
             return jsonify({'error': 'No criteria available for analysis'}), 400
-        
-        # Analyze document
-        # IMPORTANT: analyze_document must return both result JSON and final_output text
-        # Adjust analyze_document accordingly:
-        #   result, final_output = analyze_document(filepath, normalized_criteria)
+
+        # =====================================================
+        # 4. ANALYZE DOCUMENT (LLM)
+        # =====================================================
         result = analyze_document(filepath, normalized_criteria)
+
         final_output = (
-    result.get('_raw_output')
-    or result.get('_raw_report')
-    or result.get('_raw')
-    or result.get('analysis_text')
-    or ''
-)
+            result.get('_raw_output')
+            or result.get('_raw_report')
+            or result.get('_raw')
+            or result.get('analysis_text')
+            or ''
+        )
+
         if not final_output:
-            # Helpful debug log so you can see what's inside result when something goes wrong
             logger.error("DEBUG: result keys: " + ", ".join(list(result.keys())))
 
             if isinstance(result.get('summary'), str):
@@ -2059,6 +2102,8 @@ def analyze():
                 final_output = (
                     f"[Raw output missing — saved JSON at {result.get('saved_file_path')}]"
                 )
+
+        # Save FULL raw LLM output
         try:
             with open('debug_llm_output.txt', 'w', encoding='utf-8') as f:
                 f.write(final_output)
@@ -2066,64 +2111,58 @@ def analyze():
         except Exception as e:
             logger.error(f"Could not save debug_llm_output.txt: {e}")
 
-        # Check if counter-proposals section exists
+        # =====================================================
+        # 5. COUNTER-PROPOSALS VALIDATION
+        # =====================================================
         if "COUNTER" in final_output.upper() and "PROPOSAL" in final_output.upper():
-            logger.info("✓ Counter-proposals section found in output")
-
+            logger.info("✓ Counter-proposals section found")
             start_idx = final_output.upper().find("COUNTER")
             sample = final_output[start_idx:start_idx + 1000]
-            logger.info(f"Sample of counter-proposals section:\n{sample}")
+            logger.info(f"Sample:\n{sample}")
         else:
             logger.error("✗ No counter-proposals section found in LLM output!")
-                
-        # ============================================
-        # VALIDATE COUNTER-PROPOSALS BEFORE SENDING
-        # ============================================
-        counter_proposals = result.get('counter_proposals', [])
 
-        logger.info(f"Validation Check: {len(counter_proposals)} counter-proposals found")
+        counter_proposals = result.get('counter_proposals', [])
+        logger.info(f"Validation: {len(counter_proposals)} counter-proposals found")
 
         if len(counter_proposals) == 0:
             logger.error("CRITICAL: No counter-proposals generated!")
 
-            # Check if raw output contained proposals
             if isinstance(final_output, str) and "COUNTER-PROPOSALS" in final_output.upper():
-                logger.error("Proposals exist in output but parsing FAILED")
+                logger.error("Proposals exist — parsing FAILED")
                 start_idx = final_output.upper().find("COUNTER-PROPOSALS")
                 sample = (
                     final_output[start_idx:start_idx + 500]
                     if start_idx != -1 else final_output[:500]
                 )
-                logger.error(f"Output sample around COUNTER-PROPOSALS:\n{sample}")
+                logger.error(f"Sample around counter-proposals:\n{sample}")
             else:
-                logger.error("LLM did not generate counter-proposals section at all")
+                logger.error("LLM did NOT generate any counter-proposals section")
 
-            # Inject fallback error proposal
             result['counter_proposals'] = [{
                 "name": "Counter-Proposals Generation Failed",
                 "priority": "HIGH",
                 "current_issue": (
-                    "The AI system did not generate counter-proposals. This may be due to: "
-                    "(1) Token limit reached, (2) Complex document analysis, or (3) Parsing error."
+                    "The AI system did not generate counter-proposals. "
+                    "Possible causes: Token limit, complex document, or parsing error."
                 ),
                 "suggested_clause": (
                     "Please try again with a shorter document, or contact support. "
-                    "Check the analysis_debug.log file for detailed error information."
+                    "Refer to analysis_debug.log for details."
                 ),
                 "benefit": "N/A - Error condition"
             }]
 
         else:
-            # Validate each proposal
-            valid_count = 0
             valid_proposals = []
+            valid_count = 0
 
             for idx, cp in enumerate(counter_proposals, 1):
                 clause = cp.get("suggested_clause", "")
 
                 if clause and clause != "[Clause not generated - regenerate report]":
-                    valid_count += 1
                     valid_proposals.append(cp)
+                    valid_count += 1
                     logger.info(
                         f"Proposal #{idx}: {cp.get('name', 'Unknown')[:50]} | {len(clause)} chars"
                     )
@@ -2133,30 +2172,26 @@ def analyze():
                     )
 
             logger.info(
-                f"FINAL: {valid_count}/{len(counter_proposals)} proposals have valid clause text"
+                f"FINAL VALID PROPOSALS: {valid_count}/{len(counter_proposals)}"
             )
 
-            # Keep only valid ones if any exist
             if valid_proposals:
                 result['counter_proposals'] = valid_proposals
 
-        # -------------------------------
-        # 4. Save JSON to file
-        # -------------------------------
+        # =====================================================
+        # 6. SAVE JSON REPORT
+        # =====================================================
         try:
             json_file_path = save_json_report(result, filepath)
             result['saved_file_path'] = json_file_path
-            logger.info(f"Analysis complete. JSON saved to: {json_file_path}")
-
+            logger.info(f"Analysis complete. JSON saved at: {json_file_path}")
         except Exception as e:
             logger.warning(f"Could not save JSON file: {e}")
 
-        # -------------------------------
-        # 5. Final response
-        # -------------------------------
-        logger.info(
-            f"Sending response with {len(result.get('counter_proposals', []))} counter-proposals"
-        )
+        # =====================================================
+        # 7. FINAL RESPONSE
+        # =====================================================
+        logger.info(f"Sending response with {len(result.get('counter_proposals', []))} counter-proposals")
         return jsonify(result)
 
     except Exception as e:
@@ -2164,6 +2199,7 @@ def analyze():
         logger.error(f"Error in analyze route: {str(e)}")
         logger.error(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
+
     
 
     

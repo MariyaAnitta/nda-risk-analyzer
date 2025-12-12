@@ -306,54 +306,53 @@
                             <p class="card-subtitle">Configure the criteria used to analyze your NDA</p>
                         </div>
 
-                        <!-- Document Category -->
-                        <div class="form-group">
-                            <label for="documentCategory">Document Category</label>
-                            <select id="documentCategory">
-                                <option value="">Select document type...</option>
-                                <option value="nda">NDA Document</option>
-                                <option value="employment">Employee Contract</option>
-                            </select>
-                        </div>
+                    
 
-                        <!-- Additional Custom Criteria (textarea) -->
-                        <div style="margin-bottom:12px;">
-                            <label for="criteria">Additional Custom Criteria (Optional)</label>
-                            <textarea id="criteria" class="criteria-textarea" placeholder="Add your own criteria, one per line. Example:
-- Non-disparagement clause must be present
-- Force majeure events clearly defined
-- Right to audit vendor premises"></textarea>
+                        <!-- NEW DEFAULT CRITERIA BLUE BLOCK -->
+<div style="margin-bottom:16px;">
+    <button id="previewDefaultBtn" type="button" class="btn" 
+        style="width:100%; display:flex; align-items:center; gap:8px; 
+               border-radius:8px; background:#e6f0ff; border:1px solid #cfe2ff; padding:14px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#075985">
+            <path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7
+                     -1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            <circle cx="12" cy="12" r="3" stroke-width="1.2"/>
+        </svg>
+        <strong id="defaultCriteriaLabel" style="color:#075985;">
+            10 Industry-Standard NDA Criteria Applied Automatically
+        </strong>
+    </button>
+    <p style="margin-top:6px; font-size:13px; color:#6b7280;">
+        These criteria are automatically applied. Click to preview or modify.
+    </p>
+</div>
 
-                            <div class="criteria-helper">
-                                <span id="charCount">0 characters</span>
-                                <!-- Blue box / Preview (this triggers modal) -->
-                                <button id="previewDefaultBtn" type="button" class="btn" style="display:flex; align-items:center; gap:8px; border-radius:8px; background:#e6f0ff; border:1px solid #cfe2ff;">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#075985"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    <strong style="color:#075985;">10 Industry-Standard NDA Criteria Applied Automatically</strong>
-                                </button>
-                            </div>
+<!-- Additional Custom Criteria textarea -->
+<div style="margin-bottom:12px;">
+    <label for="criteria">Additional Custom Criteria (Optional)</label>
+    <textarea id="criteria" class="criteria-textarea"
+              placeholder="Add your own criteria, one per line..."></textarea>
+    <span id="charCount" style="font-size:12px; color:#6b7280;">0 characters</span>
+</div>
 
-                            <div style="margin-top:10px; color:#64748b; font-size:13px;">
-                                <strong style="color:#10b981;">Automatic:</strong> 10 industry-standard criteria will be applied unless you override them in the modal.
-                            </div>
-                        </div>
 
                         <!-- PREDEFINED (8 NDA items) - Dropdown -->
-                        <div class="predefined-criteria" id="predefinedCriteriaSection" style="display:none;">
-                            <div class="predefined-criteria-header">
-                                <div>Predefined Criteria</div>
-                                <div><span id="selectedCount" class="selected-count" style="display:none;">0</span></div>
-                            </div>
+                      <div class="predefined-criteria">
+    <div class="predefined-criteria-header">
+        <div>Add Predefined Criteria Set</div>
+        <div><span id="selectedCount" class="selected-count" style="display:none;">0</span></div>
+    </div>
 
-                            <div id="criteriaDropdown" class="criteria-dropdown">
-                                <span id="criteriaDropdownLabel">Select criteria...</span>
-                                <span style="opacity:0.7;">â–¾</span>
-                            </div>
+    <div id="criteriaDropdown" class="criteria-dropdown">
+        <span id="criteriaDropdownLabel">Select criteria...</span>
+        <span style="opacity:0.7;">▼</span>
+    </div>
 
-                            <div id="criteriaOptions" class="criteria-options" aria-hidden="true">
-                                <!-- Options populated by JS -->
-                            </div>
-                        </div>
+    <div id="criteriaOptions" class="criteria-options" aria-hidden="true">
+        <!-- JS fills NDA criteria only -->
+    </div>
+</div>
 
                         <!-- Hidden input to hold default criteria (10) separately -->
                         <input type="hidden" id="defaultCriteriaInput" name="default_criteria" value="" />
@@ -410,7 +409,7 @@
         <div class="modal" role="dialog" aria-modal="true">
             <div class="modal-header">
                 <div class="modal-title">Edit Industry-Standard NDA Criteria</div>
-                <div><button id="modalClose" class="btn">âœ•</button></div>
+                <div><button id="modalClose" class="btn">✔</button></div>
             </div>
             <div class="modal-body" id="modalBody"></div>
 
@@ -429,27 +428,15 @@
          * DATA
          *******************************/
         const predefinedCriteria = {
-            nda: [
-                "Clear definition of confidential information",
-                "Reasonable time limitations for confidentiality obligations",
-                "Permitted disclosure exceptions (legal, regulatory)",
-                "Return or destruction of confidential materials clause",
-                "No automatic non-compete or non-solicitation obligations",
-                "Mutual confidentiality obligations",
-                "Limited liability for inadvertent disclosure",
-                "Clear termination and survival clauses"
-            ],
-            employment: [
-                "Clear job description and responsibilities",
-                "Specified working hours and overtime policy",
-                "Competitive salary and benefits package",
-                "Paid time off and leave policies",
-                "Termination notice period and severance terms",
-                "Non-compete clause is reasonable in scope and duration",
-                "Intellectual property rights are clearly defined",
-                "Dispute resolution and arbitration clauses"
-            ]
-        };
+    nda: [
+        "Clear definition of confidential information",
+        "Reasonable time limitations for confidentiality obligations",
+        "Permitted disclosure exceptions (legal, regulatory)",
+        "Return or destruction of confidential materials clause",
+        "No automatic non-compete or non-solicitation obligations",
+        
+    ]
+};
 
         // Default 10 industry-standard NDA criteria (editable via modal)
         let defaultIndustryCriteria = [
@@ -509,25 +496,15 @@
             charCount.textContent = `${criteriaTextarea.value.length} characters`;
         });
 
-        // Document category change
-        documentCategory.addEventListener('change', (e) => {
-            const category = e.target.value;
-            selectedPredefinedCriteria.clear();
-
-            if (category && predefinedCriteria[category]) {
-                predefinedCriteriaSection.style.display = 'block';
-                populatePredefinedCriteria(category);
-                updateSelectedCount();
-            } else {
-                predefinedCriteriaSection.style.display = 'none';
-                criteriaOptions.innerHTML = '';
-                criteriaOptions.classList.remove('active');
-                criteriaDropdownLabel.textContent = 'Select criteria...';
-            }
-        });
+        
 
         // Drop zone interactions
-        dropZone.addEventListener('click', () => fileInput.click());
+        //dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('click', (e) => {e.preventDefault();e.stopPropagation();fileInput.click();
+});
+fileInput.addEventListener("click", (e) => {
+    e.stopPropagation();
+});
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
         dropZone.addEventListener('drop', (e) => {
@@ -562,10 +539,11 @@
             criteriaOptions.classList.toggle('active');
         });
         document.addEventListener('click', (e) => {
-            if (!predefinedCriteriaSection.contains(e.target)) {
-                criteriaOptions.classList.remove('active');
-            }
-        });
+    const predefinedSection = document.getElementById('predefinedCriteriaSection');
+    if (predefinedSection && !predefinedSection.contains(e.target)) {
+        criteriaOptions.classList.remove('active');
+    }
+});
 
         function populatePredefinedCriteria(category) {
             criteriaOptions.innerHTML = '';
@@ -585,7 +563,7 @@
                 } else {
                     criteriaList.forEach(c => selectedPredefinedCriteria.add(c));
                     document.querySelectorAll('.criteria-option[data-val]').forEach(opt => opt.classList.add('selected'));
-                    selectAll.textContent = 'âœ— Deselect All Criteria';
+                    selectAll.textContent = '✖ Deselect All Criteria';
                 }
                 updateSelectedCount();
             });
@@ -617,8 +595,9 @@
                 criteriaOptions.appendChild(opt);
             });
 
-            criteriaDropdownLabel.textContent = 'Select criteria...';
+            criteriaDropdownLabel.textContent = '✓ Select criteria...';
         }
+        populatePredefinedCriteria('nda');
 
         function toggleCriterion(criterion, optionElement) {
             if (selectedPredefinedCriteria.has(criterion)) {
@@ -648,6 +627,7 @@
          *******************************/
         analyzeForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            syncDefaultCriteriaInput();
 
             const file = fileInput.files[0];
             const customCriteriaText = criteriaTextarea.value.trim();
@@ -781,10 +761,8 @@
     syncDefaultCriteriaInput();
     closeDefaultModal();
 
-    previewDefaultBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#075985"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3" stroke-width="1.2"/></svg> <strong style="color:#075985;">{ ${defaultIndustryCriteria.length} default criteria }</strong>`;
-    setTimeout(() => {
-        previewDefaultBtn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#075985"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/><circle cx="12" cy="12" r="3" stroke-width="1.2"/></svg> <strong style="color:#075985;">10 Industry-Standard NDA Criteria Applied Automatically</strong>`;
-    }, 2000); // ← ADD THIS (closing brace, comma, time)
+    document.getElementById("defaultCriteriaLabel").textContent =
+    `${defaultIndustryCriteria.length} Industry-Standard NDA Criteria Applied Automatically`; // ← ADD THIS (closing brace, comma, time)
 } // ← ADD THIS (closing brace for function)
 
 // Keep default criteria input synced on load
@@ -793,24 +771,38 @@ syncDefaultCriteriaInput();
          * DISPLAY RESULTS (copied from your fakeindex.html)
          * This function builds the entire results page exactly as in fakeindex.html
          *******************************/
-        function displayResults(data) {
-            const riskLevel = data.risk_assessment?.risk_level || 'MODERATE';
-            const riskPercent = data.risk_assessment?.risk_percentage || 0;
-            const protectionsFound = data.risk_assessment?.protections_found || 0;
-            const protectionsMissing = data.risk_assessment?.protections_missing || 0;
+       function displayResults(data) {
+    console.log("=== DEBUG: Full data object ===");
+    console.log(data);
+    console.log("=== DEBUG: hidden_risks_detected ===");
+    console.log(data.hidden_risks_detected);
+    console.log("Length:", data.hidden_risks_detected ? data.hidden_risks_detected.length : "undefined");
 
-            const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    // Extract risk data
+    const riskData = data.risk_assessment || {};
+    const riskScore = riskData.risk_score || riskData.risk_percentage || 0;
+    const riskLevel = riskData.risk_level || 'MODERATE';
 
-            // Risk level styling
-            const riskColor = riskLevel === 'HIGH' ? '#dc2626' : riskLevel === 'MODERATE' ? '#f59e0b' : '#10b981';
-            const riskBg = riskLevel === 'HIGH' ? '#fef2f2' : riskLevel === 'MODERATE' ? '#fef3c7' : '#f0fdf4';
+    const totalCriteria = data.metadata && data.metadata.total_criteria_count 
+        ? data.metadata.total_criteria_count  // ← USE THIS FIELD
+        : (data.protections_found.length + data.protections_missing.length);
+        
+    const protectionsFound = data.protections_found ? data.protections_found.length : 0;
+    const protectionsMissing = data.protections_missing ? data.protections_missing.length : 0;
+    
 
-            // Safe helper function to check for [Not Specified]
-            const isNotSpecified = (value) => {
-                return !value || value === '[Not Specified]' || (typeof value === 'string' && value.includes('[Not Specified]'));
-            };
+    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-            let html = `
+    // Risk level styling
+    const riskColor = riskLevel.includes('HIGH') ? '#dc2626' : riskLevel.includes('MODERATE') ? '#f59e0b' : '#10b981';
+    const riskBg = riskLevel.includes('HIGH') ? '#fef2f2' : riskLevel.includes('MODERATE') ? '#fef3c7' : '#f0fdf4';
+
+    // Safe helper function to check for [Not Specified]
+    const isNotSpecified = (value) => {
+        return !value || value === '[Not Specified]' || (typeof value === 'string' && value.includes('[Not Specified]'));
+    };
+
+    let html = `
         <div class="results-header">
             <div class="results-header-left">
                 <h3>Risk Assessment Report</h3>
@@ -833,7 +825,7 @@ syncDefaultCriteriaInput();
         </div>
 
         <div class="container">
-            <!-- 1. Executive Summary -->
+            <!-- 1. Executive Summary (Clean Version) -->
             <div class="card" style="padding: 32px; margin-bottom: 24px;">
                 <div style="display: flex; align-items: start; justify-content: space-between; margin-bottom: 24px;">
                     <div>
@@ -841,10 +833,10 @@ syncDefaultCriteriaInput();
                         <p style="font-size: 14px; color: #64748b;">Overall document assessment and recommendation</p>
                     </div>
                     <span style="display: inline-block; padding: 8px 16px; background: #f1f5f9; border-radius: 8px; font-size: 16px; font-weight: 600; color: #1e293b;">
-                        Risk Score: ${riskPercent}/100
+                        Risk Score: ${riskScore}/100
                     </span>
                 </div>
-
+                
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px;">
                     <div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
@@ -855,12 +847,12 @@ syncDefaultCriteriaInput();
                             </svg>
                             <span style="font-size: 13px; font-weight: 500; color: #64748b;">Risk Level</span>
                         </div>
-                        <p style="font-size: 28px; font-weight: 700; color: ${riskColor}; margin-bottom: 8px;">${riskLevel} RISK</p>
+                        <p style="font-size: 28px; font-weight: 700; color: ${riskColor}; margin-bottom: 8px;">${riskLevel}</p>
                         <div style="height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-                            <div style="height: 100%; background: ${riskColor}; width: ${riskPercent}%; transition: width 0.3s;"></div>
+                            <div style="height: 100%; background: ${riskColor}; width: ${riskScore}%; transition: width 0.3s;"></div>
                         </div>
                     </div>
-
+                    
                     <div>
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
                             <svg width="20" height="20" fill="none" stroke="${riskColor}" viewBox="0 0 24 24">
@@ -868,93 +860,205 @@ syncDefaultCriteriaInput();
                             </svg>
                             <span style="font-size: 13px; font-weight: 500; color: #64748b;">Recommendation</span>
                         </div>
-                        <p style="font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #1e293b;">${data.recommendation?.includes('DO NOT SIGN') ? 'DO NOT SIGN' : data.recommendation?.includes('NEGOTIATE') ? 'NEGOTIATE FIRST' : 'SIGN AS-IS'}</p>
+                        <p style="font-size: 28px; font-weight: 700; margin-bottom: 8px; color: #1e293b;">
+                            ${riskLevel.includes('HIGH') ? 'DO NOT SIGN' : riskLevel.includes('MODERATE') ? 'NEGOTIATE FIRST' : 'REVIEW & SIGN'}
+                        </p>
                         <p style="font-size: 13px; color: #64748b; line-height: 1.6;">
                             ${data.summary || 'Analysis complete. Review findings below.'}
                         </p>
                     </div>
                 </div>
             </div>
+           <!-- 2. Hidden & Disguised Risks Section ⭐ SIMPLIFIED -->
+${(data.hidden_risks_detected && Array.isArray(data.hidden_risks_detected) && data.hidden_risks_detected.length > 0) ? `
+<div style="background: #fef9e7; border: 1px solid #f59e0b; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+    <div style="margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <svg width="24" height="24" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <h2 style="font-size: 20px; font-weight: 700; color: #92400e;">🎭 Hidden & Disguised Risks</h2>
+        </div>
+        <p style="font-size: 13px; color: #92400e;">These risks aren't obvious on first reading but could create significant liability.</p>
+    </div>
 
-            <!-- 2. Recommended Counter-Proposals -->
-            ${data.counter_proposals && data.counter_proposals.length > 0 ? `
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                <div style="margin-bottom: 20px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <svg width="24" height="24" fill="none" stroke="#1e293b" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        <h2 style="font-size: 20px; font-weight: 700; color: #1e293b;">Recommended Counter-Proposals</h2>
+    <!-- Display each hidden risk -->
+    <div style="display: grid; gap: 16px;">
+        ${data.hidden_risks_detected.map((risk, index) => {
+            const severityColor = risk.severity === 'CRITICAL' ? '#dc2626' : 
+                                 risk.severity === 'HIGH' ? '#ea580c' : 
+                                 risk.severity === 'MEDIUM' ? '#f59e0b' : '#3b82f6';
+            
+            const severityBg = risk.severity === 'CRITICAL' ? '#fef2f2' : 
+                              risk.severity === 'HIGH' ? '#fff7ed' : 
+                              risk.severity === 'MEDIUM' ? '#fef3c7' : '#eff6ff';
+            
+            return `
+            <div style="background: white; border: 1px solid #f3e0b8; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                
+                <!-- Header with trap name and severity -->
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                    <h3 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0; flex: 1;">
+                        🎭 HIDDEN TRAP ${index + 1}: ${risk.name || 'Unknown Trap'}
+                    </h3>
+                    ${risk.severity ? `
+                    <span style="padding: 6px 12px; background: ${severityBg}; color: ${severityColor}; border-radius: 6px; font-size: 11px; font-weight: 700; white-space: nowrap; margin-left: 12px;">
+                        ${risk.severity}
+                    </span>
+                    ` : ''}
+                </div>
+
+                <!-- Primary Clause -->
+                ${risk.primary_clause ? `
+                <div style="margin-bottom: 14px;">
+                    <p style="font-size: 12px; font-weight: 700; color: #64748b; margin: 0 0 6px;">Primary Clause${risk.clause_number ? ' (Clause ' + risk.clause_number + ')' : ''}:</p>
+                    <div style="background: #f8fafc; padding: 12px; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                        <p style="font-size: 13px; color: #475569; margin: 0; line-height: 1.6;">
+                            ${risk.primary_clause}
+                        </p>
                     </div>
-                    <p style="font-size: 13px; color: #64748b;">Priority-ranked clause recommendations to strengthen your agreement</p>
                 </div>
+                ` : ''}
 
-                <div style="display: grid; gap: 16px;">
-                    ${data.counter_proposals.map((proposal, index) => {
-                        const priority = (proposal.priority || 'MEDIUM').toUpperCase();
-
-                        let priorityBadge;
-                        if (priority === 'BLOCKING') {
-                            priorityBadge = '<span style="display: inline-block; padding: 6px 14px; background: #7f1d1d; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">ðŸš« BLOCKING</span>';
-                        } else if (priority === 'HIGH') {
-                            priorityBadge = '<span style="display: inline-block; padding: 6px 14px; background: #dc2626; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">HIGH Priority</span>';
-                        } else if (priority === 'MEDIUM') {
-                            priorityBadge = '<span style="display: inline-block; padding: 6px 14px; background: #f59e0b; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">MEDIUM Priority</span>';
-                        } else {
-                            priorityBadge = '<span style="display: inline-block; padding: 6px 14px; background: #3b82f6; color: white; border-radius: 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.5px;">LOW Priority</span>';
-                        }
-
-                        return `
-                        <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
-                            <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; gap: 16px;">
-                                <h3 style="font-size: 16px; font-weight: 600; color: #1e293b; margin: 0; flex: 1;">
-                                    ${proposal.name || `Recommendation ${index + 1}`}
-                                </h3>
-                                ${priorityBadge}
-                            </div>
-
-                            ${proposal.suggested_clause && proposal.suggested_clause !== '[Clause text not generated - please regenerate report]' ? `
-                            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 16px; margin-bottom: 16px;">
-                                <p style="font-size: 14px; color: #334155; line-height: 1.7; margin: 0; text-align: justify;">
-                                    ${proposal.suggested_clause}
-                                </p>
-                            </div>
-
-                            <div style="display: flex; gap: 8px;">
-                                <button onclick="copyToClipboard(\`${proposal.suggested_clause.replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/"/g, '&quot;').replace(/\n/g, ' ')}\`, this)"
-                                        style="padding: 10px 18px; background: white; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;"
-                                        onmouseover="this.style.background='#f1f5f9'"
-                                        onmouseout="this.style.background='white'">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                                    </svg>
-                                    Copy Text
-                                </button>
-                            </div>
-                            ` : `
-                            <div style="padding: 16px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; margin-bottom: 12px;">
-                                <p style="font-size: 13px; color: #991b1b; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                    <svg width="16" height="16" fill="none" stroke="#dc2626" viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="10"/>
-                                        <line x1="15" y1="9" x2="9" y2="15"/>
-                                        <line x1="9" y1="9" x2="15" y2="15"/>
-                                    </svg>
-                                    <strong>Clause text not generated.</strong> Please regenerate the report or add the clause manually.
-                                </p>
-                            </div>
-                            `}
-                        </div>
-                        `;
-                    }).join('')}
+                <!-- Real Meaning (Impact) -->
+                ${risk.real_meaning ? `
+                <div>
+                    <p style="font-size: 12px; font-weight: 700; color: #64748b; margin: 0 0 6px;">Real Impact on 10xds:</p>
+                    <div style="background: #fff5f5; padding: 12px; border-left: 3px solid #dc2626; border-radius: 6px;">
+                        <p style="font-size: 13px; color: #7f1d1d; margin: 0; line-height: 1.6; font-weight: 500;">
+                            ${risk.real_meaning}
+                        </p>
+                    </div>
                 </div>
+                ` : ''}
+
             </div>
-            ` : ''}
-
             `;
-            html += `
+        }).join('')}
+    </div>
 
-            <!-- 3. Vendor & Jurisdiction Intelligence + Universal Criteria Grid -->
+    <!-- Summary footer -->
+    <div style="margin-top: 16px; padding: 12px; background: white; border-radius: 6px; border-left: 3px solid #3b82f6;">
+        <p style="font-size: 12px; color: #475569; margin: 0;">
+            <strong>${data.hidden_risks_detected.length} hidden risk${data.hidden_risks_detected.length !== 1 ? 's' : ''} detected.</strong> 
+            These should be addressed in counter-proposals below.
+        </p>
+    </div>
+
+</div>
+` : `
+<!-- No hidden risks detected -->
+<div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <svg width="20" height="20" fill="none" stroke="#16a34a" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p style="font-size: 14px; color: #166534; margin: 0; font-weight: 600;">
+            No hidden or disguised risks detected in this document.
+        </p>
+    </div>
+</div>
+`}
+
+
+            <!-- 3. Recommended Counter-Proposals -->
+${data.counter_proposals && data.counter_proposals.length > 0 ? `
+<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+
+    <div style="margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+            <svg width="24" height="24" fill="none" stroke="#1e293b" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <h2 style="font-size: 20px; font-weight: 700; color: #1e293b;">
+                Recommended Counter-Proposals
+            </h2>
+        </div>
+
+        <p style="font-size: 13px; color: #64748b;">
+            Priority-ranked clause recommendations to strengthen your agreement
+        </p>
+    </div>
+
+    <div style="display: grid; gap: 16px;">
+        ${data.counter_proposals.map((proposal, index) => {
+
+            const priority = (proposal.priority || 'MEDIUM').toUpperCase();
+
+            let priorityBadge;
+            if (priority === 'BLOCKING') {
+                priorityBadge = '<span style="padding: 6px 14px; background: #7f1d1d; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">🚫 BLOCKING</span>';
+            } else if (priority === 'HIGH') {
+                priorityBadge = '<span style="padding: 6px 14px; background: #dc2626; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">HIGH Priority</span>';
+            } else if (priority === 'MEDIUM') {
+                priorityBadge = '<span style="padding: 6px 14px; background: #f59e0b; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">MEDIUM Priority</span>';
+            } else {
+                priorityBadge = '<span style="padding: 6px 14px; background: #3b82f6; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">LOW Priority</span>';
+            }
+
+            return `
+            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+                    <h3 style="font-size: 16px; font-weight: 600; color: #1e293b; margin: 0;">
+                        ${proposal.name || `Recommendation ${index + 1}`}
+                    </h3>
+                    ${priorityBadge}
+                </div>
+
+                ${proposal.current_issue ? `
+                <div style="padding: 12px; background: #fef2f2; border-left: 3px solid #dc2626; border-radius: 4px; margin-bottom: 16px;">
+                    <p style="font-size: 12px; font-weight: 700; color: #991b1b; margin-bottom: 4px;">⚠️ Current Risk:</p>
+                    <p style="font-size: 13px; color: #7f1d1d; line-height: 1.6;">${proposal.current_issue}</p>
+                </div>
+                ` : ''}
+
+                ${proposal.suggested_clause ? `
+                <div style="margin-bottom: 16px;">
+                    <p style="font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 6px;">✓ Suggested Fix:</p>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 6px;">
+                        <p style="font-size: 14px; color: #334155; margin: 0; line-height: 1.7; text-align: justify;">
+                            ${proposal.suggested_clause}
+                        </p>
+                    </div>
+                </div>
+
+                ${proposal.benefit ? `
+                <div style="padding: 12px; background: #f0fdf4; border-left: 3px solid #10b981; border-radius: 4px; margin-bottom: 16px;">
+                    <p style="font-size: 12px; font-weight: 700; color: #065f46; margin-bottom: 4px;">Why This Helps:</p>
+                    <p style="font-size: 13px; color: #166534; line-height: 1.6;">${proposal.benefit}</p>
+                </div>
+                ` : ''}
+
+                <button onclick="copyToClipboard(\`${proposal.suggested_clause
+                    .replace(/`/g, '\\`')
+                    .replace(/\$/g, '\\$')
+                    .replace(/"/g, '&quot;')
+                    .replace(/\n/g, ' ')
+                }\`, this)"
+                style="padding: 10px 18px; background: white; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">
+                    Copy Text
+                </button>
+
+                ` : `
+                <div style="padding: 14px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 6px;">
+                    <p style="font-size: 13px; color: #991b1b; margin: 0;">
+                        Clause not generated — regenerate report.
+                    </p>
+                </div>
+                `}
+            </div>
+            `;
+        }).join('')}
+    </div>
+
+</div>
+` : ''}
+
+`;
+html += `
+
+            <!-- 4. Vendor & Jurisdiction Intelligence + Universal Criteria Grid -->
             ${data.jurisdiction_intelligence ? `
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px;">
                 <div class="card" style="padding: 24px;">
@@ -986,33 +1090,72 @@ syncDefaultCriteriaInput();
                         ${isNotSpecified(data.jurisdiction_intelligence.vendor_name) ? `
                         <div style="margin-top: 8px; padding: 12px; background: #fef3c7; border-left: 3px solid #f59e0b; border-radius: 4px;">
                             <p style="font-size: 12px; color: #92400e; line-height: 1.5;">
-                                <strong>âš  Note:</strong> Vendor details not found in document. Using default strict compliance for safety.
+                                <strong>⚠  Note:</strong> Vendor details not found in document. Using default strict compliance for safety.
                             </p>
                         </div>
                         ` : ''}
                     </div>
                 </div>
 
-                <div class="card" style="padding: 24px;">
-                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Universal NDA Criteria</h3>
-                    <div style="text-align: center; padding: 20px 0;">
-                        <div style="font-size: 56px; font-weight: 700; color: ${riskColor}; margin-bottom: 8px;">${protectionsFound}/${protectionsFound + protectionsMissing}</div>
-                        <p style="font-size: 14px; color: #64748b; margin-bottom: 16px;">Protections Found</p>
-                        <div style="height: 8px; background: #e2e8f0; border-radius: 999px; width: 60%; margin: 0 auto; overflow: hidden;">
-                            <div style="height: 100%; background: ${riskColor}; width: ${(protectionsFound / (protectionsFound + protectionsMissing || 1)) * 100}%;"></div>
-                        </div>
-                    </div>
-                    ${protectionsMissing > 0 ? `
-                    <div style="padding: 12px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626;">
-                        <p style="font-size: 13px; font-weight: 600; color: #991b1b; margin-bottom: 4px;">Missing:</p>
-                        <p style="font-size: 12px; color: #7f1d1d;">Check detailed compliance section below</p>
-                    </div>
-                    ` : ''}
+             <div class="card" style="padding: 24px;">
+    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Universal NDA Criteria</h3>
+    
+    <div style="text-align: center; padding: 20px 0;">
+        <div style="font-size: 56px; font-weight: 700; color: ${riskColor}; margin-bottom: 8px;">
+           ${protectionsFound}
+            /
+            ${totalCriteria}
+        </div>
+
+        <p style="font-size: 14px; color: #64748b; margin-bottom: 16px;">Protections Found</p>
+
+        <div style="height: 8px; background: #e2e8f0; border-radius: 999px; width: 60%; margin: 0 auto; overflow: hidden;">
+            <div style="height: 100%; background: ${riskColor};
+                        width: ${
+                            ((data.protections_found ? data.protections_found.length : 0) /
+                            (
+                                (data.protections_found ? data.protections_found.length : 0) +
+                                (data.protections_missing ? data.protections_missing.length : 0) ||
+                                1
+                            )) * 100
+                        }%;"></div>
+        </div>
+    </div>
+
+    <!-- ✅ FIXED: Show ALL missing protections (no "+ X more" trick) -->
+    ${data.protections_missing && data.protections_missing.length > 0 ? `
+        <div style="padding: 14px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626; margin-top: 16px;">
+            <p style="font-size: 13px; font-weight: 700; color: #991b1b; margin-bottom: 8px;">
+                ✗ Missing Protections (${data.protections_missing.length}):
+            </p>
+
+            <ul style="margin: 0; padding-left: 20px; list-style: disc;">
+                ${data.protections_missing.map(item => `
+                    <li style="font-size: 12px; color: #7f1d1d; margin-bottom: 4px;">
+                        ${item.name || item}
+                    </li>
+                `).join('')}
+            </ul>
+            
+            ${data.protections_missing.length > 5 ? `
+                <p style="font-size: 11px; color: #92400e; margin-top: 8px; font-style: italic;">
+                    
+                </p>
+            ` : ''}
+        </div>
+    ` : `
+        <div style="padding: 12px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 16px;">
+            <p style="font-size: 13px; color: #166534; margin: 0; font-weight: 600;">
+                ✓ All evaluated protections are present
+            </p>
+        </div>
+    `}
+</div>
                 </div>
             </div>
             ` : ''}
 
-            <!-- 4. Detailed Compliance Analysis - COLLAPSIBLE -->
+            <!-- 5. Detailed Compliance Analysis - COLLAPSIBLE -->
             <div class="card" style="padding: 24px; margin-bottom: 24px;">
                 <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">Detailed Compliance Analysis</h3>
                 <div style="display: grid; gap: 8px;">
@@ -1045,7 +1188,7 @@ syncDefaultCriteriaInput();
                                 <ul style="display: grid; gap: 6px;">
                                     ${data.indian_law_compliance.compliant_items.map(item => `
                                         <li style="display: flex; align-items: start; gap: 8px; font-size: 13px; color: #065f46;">
-                                            <span style="color: #10b981; margin-top: 2px;">âœ“</span>
+                                            <span style="color: #10b981; margin-top: 2px;">✓</span>
                                             <span>${item}</span>
                                         </li>
                                     `).join('')}
@@ -1074,27 +1217,75 @@ syncDefaultCriteriaInput();
                     </div>
                     ` : ''}
                     
-                    <!-- Company Policy Compliance (add if needed) -->
-                    ${data.company_policy_compliance ? `
-                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                        <button onclick="toggleSection(this)" style="width: 100%; padding: 16px; display: flex; align-items: center; justify-content: space-between; background: white; border: none; cursor: pointer; text-align: left; transition: background 0.2s;">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <svg width="20" height="20" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <line x1="12" x2="12" y1="8" y2="12"/>
-                                    <line x1="12" x2="12.01" y1="16" y2="16"/>
-                                </svg>
-                                <span style="font-size: 15px; font-weight: 600; color: #1e293b;">10XDS Company Policy Compliance</span>
-                            </div>
-                            <svg width="20" height="20" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.2s;">
-                                <polyline points="6 9 12 15 18 9"/>
-                            </svg>
-                        </button>
-                        <div style="display: none; padding: 0 16px 16px 16px; background: #f8fafc;">
-                            <p style="font-size: 13px; color: #64748b;">Company policy compliance details...</p>
-                        </div>
-                    </div>
-                    ` : ''}
+                    <!-- Company Policy Compliance -->
+${data.company_policy_compliance ? `
+<div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+    <button onclick="toggleSection(this)" style="width: 100%; padding: 16px; display: flex; align-items: center; justify-content: space-between; background: white; border: none; cursor: pointer; text-align: left; transition: background 0.2s;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <svg width="20" height="20" fill="none" stroke="#f59e0b" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" x2="12" y1="8" y2="12"/>
+                <line x1="12" x2="12.01" y1="16" y2="16"/>
+            </svg>
+            <span style="font-size: 15px; font-weight: 600; color: #1e293b;">10XDS Company Policy Compliance</span>
+        </div>
+        <svg width="20" height="20" fill="none" stroke="#94a3b8" viewBox="0 0 24 24" style="transform: rotate(0deg); transition: transform 0.2s;">
+            <polyline points="6 9 12 15 18 9"/>
+        </svg>
+    </button>
+    <div style="display: none; padding: 0 16px 16px 16px; background: #f8fafc;">
+        ${data.company_policy_compliance.blocking_violations && data.company_policy_compliance.blocking_violations.length > 0 ? `
+        <div style="margin-bottom: 16px;">
+            <h4 style="font-size: 13px; font-weight: 600; color: #dc2626; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <svg width="16" height="16" fill="none" stroke="#dc2626" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="15" y1="9" x2="9" y2="15"/>
+                    <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                🚫 Blocking Violations
+            </h4>
+            <ul style="display: grid; gap: 6px;">
+                ${data.company_policy_compliance.blocking_violations.map(item => `
+                    <li style="display: flex; align-items: start; gap: 8px; font-size: 13px; color: #7f1d1d;">
+                        <span style="color: #dc2626; margin-top: 2px;">🚫</span>
+                        <span>${item}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
+        ` : ''}
+
+        ${data.company_policy_compliance.missing_protections && data.company_policy_compliance.missing_protections.length > 0 ? `
+        <div style="margin-bottom: 16px;">
+            <h4 style="font-size: 13px; font-weight: 600; color: #dc2626; margin-bottom: 12px;">
+                ✗ Missing Mandatory Protections
+            </h4>
+            ${data.company_policy_compliance.missing_protections.map(item => `
+                <div style="padding: 10px; background: #fef2f2; border-left: 3px solid #dc2626; margin-bottom: 6px; border-radius: 4px; font-size: 13px; color: #7f1d1d;">
+                    ${item}
+                </div>
+            `).join('')}
+        </div>
+        ` : ''}
+
+        ${data.company_policy_compliance.preference_gaps && data.company_policy_compliance.preference_gaps.length > 0 ? `
+        <div>
+            <h4 style="font-size: 13px; font-weight: 600; color: #3b82f6; margin-bottom: 12px;">
+                ℹ Preference Gaps
+            </h4>
+            <ul style="display: grid; gap: 6px;">
+                ${data.company_policy_compliance.preference_gaps.map(item => `
+                    <li style="display: flex; align-items: start; gap: 8px; font-size: 13px; color: #1e40af;">
+                        <span style="color: #3b82f6; margin-top: 2px;">ℹ</span>
+                        <span>${item}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        </div>
+        ` : ''}
+    </div>
+</div>
+` : ''}
                 </div>
             </div>
         </div>
@@ -1182,12 +1373,12 @@ syncDefaultCriteriaInput();
                     const data = await response.json();
                     if (data.success && data.criteria) {
                         const criteriaList = data.criteria.map((c,i) => `${i+1}. ${c}`).join('\n');
-                        alert(`âœ… Default NDA Criteria (${data.count} total)\n\n${criteriaList}\n\nThese criteria are automatically applied if you don't provide custom ones.`);
+                        alert(`✓… Default NDA Criteria (${data.count} total)\n\n${criteriaList}\n\nThese criteria are automatically applied if you don't provide custom ones.`);
                     } else {
-                        alert('âŒ Could not load default criteria. Please try again.');
+                        alert('✗ Could not load default criteria. Please try again.');
                     }
                 } catch(err) {
-                    alert('âŒ Error fetching criteria: ' + (err.message || err));
+                    alert('✗ Error fetching criteria: ' + (err.message || err));
                 } finally {
                     button.disabled = false;
                     button.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">

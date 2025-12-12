@@ -1,5 +1,6 @@
 import os
 import sys
+from flask_cors import CORS
 import json
 import re
 from pathlib import Path
@@ -9,10 +10,9 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 import PyPDF2
 from docx import Document as DocxDocument
-
-
 from risk_schema import RISK_ANALYSIS_SCHEMA
 from risk_pattern_detector import scan_risky_patterns
 from definition_analyzer import analyze_definitions
@@ -30,9 +30,15 @@ try:
 except ImportError:
     pdfplumber = None
 
-load_dotenv()
+#load_dotenv()
+dotenv_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=dotenv_path)
+print(f"✅ Loaded .env from: {dotenv_path}")
+print(f"✅ File exists: {dotenv_path.exists()}")
 
 app = Flask(__name__)
+
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'docx', 'txt'}
@@ -40,15 +46,15 @@ app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'docx', 'txt'}
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-
-GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_KEY:
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+#GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+'''GROQ_API_KEY = os.getenv("GROQ_API_KEY")'''
+"""if not GEMINI_KEY:
     print(" ERROR: Missing GEMINI_API_KEY in .env")
     sys.exit(1)
-
 try:
     llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash-lite",
         google_api_key=GEMINI_KEY,
         temperature=0.0,
         max_output_tokens=50000,
@@ -56,7 +62,40 @@ try:
     )
 except Exception as e:
     print(f" LLM Initialization Failed: {e}")
+    sys.exit(1)"""
+
+try:
+    llm = ChatOpenAI(
+        model="meta-llama/llama-3-70b-instruct",
+        api_key=OPENROUTER_API_KEY,  # Correct parameter
+        base_url="https://openrouter.ai/api/v1",  # Correct parameter (not openai_api_base)
+        temperature=0.0,
+        max_tokens=50000,
+        timeout=180,
+        default_headers={  #  CORRECT placement
+            "HTTP-Referer": "http://localhost:5000",
+            "X-Title": "NDA Risk Analyzer"
+        }
+    )
+    print(" LLM initialized successfully with OpenRouter")
+except Exception as e:
+    print(f" LLM Initialization Failed: {e}")
     sys.exit(1)
+"""try:
+    llm = ChatOpenAI(
+        model="llama-3.1-8b-instant",
+        api_key=GROQ_API_KEY,
+        base_url="https://api.groq.com/openai/v1",
+        temperature=0.0,
+        max_tokens=32000,  # Groq's max for this model
+        timeout=180
+    )
+    print(" LLM initialized successfully with Groq (Llama 3.3 70B)")
+    print(" Speed: 280 tokens/sec | Rate: 1K RPM | FREE")
+except Exception as e:
+    print(f" LLM Initialization Failed: {e}")
+    sys.exit(1)"""
+
 
 def load_indian_law_rules() -> dict:
     """Load Indian Contract Act compliance rules."""
@@ -64,10 +103,10 @@ def load_indian_law_rules() -> dict:
         rules_file = Path(__file__).parent / "indian_contract_act_rules.json"
         with open(rules_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        logger.info(f"âœ“ Loaded Indian Contract Act rules")
+        logger.info(f"✓ Loaded Indian Contract Act rules")
         return data
     except Exception as e:
-        logger.warning(f"âš  Could not load Indian law rules: {e}")
+        logger.warning(f"⚠ Could not load Indian law rules: {e}")
         return {}
 
 def load_company_requirements() -> dict:
@@ -76,10 +115,10 @@ def load_company_requirements() -> dict:
         req_file = Path(__file__).parent / "10xds_company_requirements.json"
         with open(req_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        logger.info(f"âœ“ Loaded 10xds company requirements")
+        logger.info(f"✓ Loaded 10xds company requirements")
         return data
     except Exception as e:
-        logger.warning(f"âš  Could not load company requirements: {e}")
+        logger.warning(f"⚠ Could not load company requirements: {e}")
         return {}
 
 def load_jurisdiction_mapping() -> dict:
@@ -88,10 +127,10 @@ def load_jurisdiction_mapping() -> dict:
         juris_file = Path(__file__).parent / "jurisdiction_mapping.json"
         with open(juris_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        logger.info(f"âœ“ Loaded jurisdiction mapping")
+        logger.info(f"✓ Loaded jurisdiction mapping")
         return data
     except Exception as e:
-        logger.warning(f"âš  Could not load jurisdiction mapping: {e}")
+        logger.warning(f"⚠ Could not load jurisdiction mapping: {e}")
         return {}
     
 def allowed_file(filename):
@@ -111,10 +150,10 @@ def load_universal_criteria() -> list:
             criteria_entry = f"[{criterion['priority']}] {criterion['category']}: {criterion['description']}"
             criteria_list.append(criteria_entry)
         
-        print(f"âœ“ Loaded {len(criteria_list)} universal NDA criteria")
+        print(f"✓ Loaded {len(criteria_list)} universal NDA criteria")
         return criteria_list
     except Exception as e:
-        print(f"âš  Warning: Could not load universal criteria: {e}")
+        print(f"⚠ Warning: Could not load universal criteria: {e}")
         return []
 
 
@@ -186,7 +225,7 @@ def load_document(file_path: str) -> str:
         raise ValueError(f"Unsupported file type: {ext}")
 
 
-# âœ… REPLACE EXISTING AGENT DEFINITIONS WITH THESE ENHANCED VERSIONS
+# ✅ REPLACE EXISTING AGENT DEFINITIONS WITH THESE ENHANCED VERSIONS
 
 # Load compliance databases
 INDIAN_LAW_RULES = load_indian_law_rules()
@@ -218,13 +257,13 @@ jurisdiction_analyzer = Agent(
     backstory=f"""You are an international contract jurisdiction expert with a strict rule: ONLY extract information that is EXPLICITLY written in the document.
 
     CRITICAL RULES:
-    - If vendor name is NOT mentioned â†’ Return "[Not Specified]"
-    - If vendor location is NOT mentioned â†’ Return "[Not Specified]"
-    - If governing law is NOT mentioned â†’ Return "[Not Specified]"
-    - If jurisdiction clause is NOT mentioned â†’ Return "[Not Specified]"
+    - If vendor name is NOT mentioned → Return "[Not Specified]"
+    - If vendor location is NOT mentioned → Return "[Not Specified]"
+    - If governing law is NOT mentioned → Return "[Not Specified]"
+    - If jurisdiction clause is NOT mentioned → Return "[Not Specified]"
     - NEVER guess, infer, or make up information
     - NEVER use example company names like "Acme Corp" or "ABC Company"
-    - If a field is unclear or ambiguous â†’ Return "[Not Specified]"
+    - If a field is unclear or ambiguous → Return "[Not Specified]"
     
     Your job is to:
     
@@ -239,13 +278,13 @@ jurisdiction_analyzer = Agent(
        - International Tier 1 (Singapore, US, UK, Canada, Australia)
        - International Tier 2 (Germany, France, Netherlands, Japan, UAE)
        - High-risk jurisdiction (China, Russia)
-       - If location not specified â†’ "unknown"
+       - If location not specified → "unknown"
     
     3. DETERMINE compliance requirements based on classification:
-       - Indian domestic â†’ STRICT Indian Contract Act compliance
-       - International Tier 1 â†’ MODERATE compliance + arbitration flexibility
-       - International Tier 2/High-risk â†’ BASIC compliance + mandatory Indian arbitration
-       - Unknown â†’ Default to STRICT compliance for safety
+       - Indian domestic → STRICT Indian Contract Act compliance
+       - International Tier 1 → MODERATE compliance + arbitration flexibility
+       - International Tier 2/High-risk → BASIC compliance + mandatory Indian arbitration
+       - Unknown → Default to STRICT compliance for safety
     
     OUTPUT FORMAT (JSON-style):
     {{
@@ -320,9 +359,9 @@ indian_law_validator = Agent(
     {json.dumps(INDIAN_LAW_RULES.get('section_27_restraints', {}), indent=2)}
     
     OUTPUT: List of:
-    - âœ“ COMPLIANT items (with evidence)
-    - âœ— VIOLATIONS found (with severity: BLOCKING/HIGH/MEDIUM)
-    - âš  RISKS identified (enforcement concerns)
+    - ✓ COMPLIANT items (with evidence)
+    - ✗ VIOLATIONS found (with severity: BLOCKING/HIGH/MEDIUM)
+    - ⚠ RISKS identified (enforcement concerns)
     """,
     llm=llm,
     verbose=False,
@@ -362,15 +401,15 @@ company_policy_validator = Agent(
     Mandatory Protections: {json.dumps(COMPANY_REQUIREMENTS.get('mandatory_protections', {}).get('required_clauses', []), indent=2)}
     
     OUTPUT: Categorized findings:
-    - ðŸš« BLOCKING VIOLATIONS (if any - recommend DO NOT SIGN)
-    - âœ— MISSING PROTECTIONS (with severity)
-    - â„¹ PREFERENCE GAPS (negotiable items)
+    - 🚫 BLOCKING VIOLATIONS (if any - recommend DO NOT SIGN)
+    - ✗ MISSING PROTECTIONS (with severity)
+    - ℹ PREFERENCE GAPS (negotiable items)
     """,
     llm=llm,
     verbose=False,
     allow_delegation=False,
 )
-# âœ… NEW AGENT: Hidden Risk & Trap Clause Detector
+# ✅ NEW AGENT: Hidden Risk & Trap Clause Detector
 hidden_clause_detector = Agent(
     role="Hidden Risk & Trap Clause Specialist",
     goal="Identify disguised, indirect, or cross-referenced obligations that create unexpected risks using regex flags, definition analysis, and cross-reference mapping.",
@@ -413,7 +452,7 @@ hidden_clause_detector = Agent(
     
     Format your output as:
     
-    ðŸŽ­ HIDDEN TRAP #[N]: [Trap Name]
+    🎭 HIDDEN TRAP #[N]: [Trap Name]
     Primary Clause: [Quote the main clause, with clause number]
     Hidden Mechanism: [Definition trap / Cross-reference trap / Imbalance trap / Temporal trap / Scope trap / Combined risk]
     How It Works: [Explain the trap in 2-3 sentences - connect the dots between clauses]
@@ -423,9 +462,9 @@ hidden_clause_detector = Agent(
     Confidence: [0.0-1.0 score]
     
     FALSE POSITIVE FILTERING:
-    - If regex flagged "unlimited growth potential" â†’ NOT a risk (context is positive)
-    - If "unlimited liability" but Clause X caps it â†’ Downgrade to LOW risk
-    - If broad definition but narrow application â†’ Explain why acceptable
+    - If regex flagged "unlimited growth potential" → NOT a risk (context is positive)
+    - If "unlimited liability" but Clause X caps it → Downgrade to LOW risk
+    - If broad definition but narrow application → Explain why acceptable
     
     CRITICAL: Always check surrounding context (3 clauses before/after) before confirming a risk.
     """,
@@ -444,7 +483,7 @@ risk_evaluator = Agent(
     - Jurisdiction risks
     
     RISK SCORING LOGIC:
-    1. If ANY BLOCKING violation found â†’ HIGH RISK (automatic)
+    1. If ANY BLOCKING violation found → HIGH RISK (automatic)
     2. Otherwise calculate:
        - Count HIGH severity issues
        - Count MEDIUM severity issues
@@ -486,11 +525,11 @@ mitigation_advisor = Agent(
     - Make clauses immediately usable without modification
     
     PRIORITIZE in this order:
-    1. ðŸš« BLOCKING violations (most critical)
-    2. âœ— Indian Contract Act violations (HIGH priority)
-    3. âœ— Missing mandatory 10xds protections (HIGH priority)
-    4. âš  Jurisdiction/enforcement risks (MEDIUM priority)
-    5. â„¹ Preference gaps (LOW priority)
+    1. 🚫 BLOCKING violations (most critical)
+    2. ✗ Indian Contract Act violations (HIGH priority)
+    3. ✗ Missing mandatory 10xds protections (HIGH priority)
+    4. ⚠ Jurisdiction/enforcement risks (MEDIUM priority)
+    5. ℹ Preference gaps (LOW priority)
     
     EXAMPLE FORMAT:
     
@@ -516,7 +555,7 @@ report_generator = Agent(
     
     REPORT STRUCTURE:
     1. Executive Summary (risk level + key concerns)
-    2. ðŸŽ­ HIDDEN & DISGUISED RISKS (NEW SECTION - comes early!)  # NEW SECTION ADDED
+    2. 🎭 HIDDEN & DISGUISED RISKS (NEW SECTION - comes early!)  # NEW SECTION ADDED
     3. Vendor & Jurisdiction Intelligence
     4. Indian Contract Act Compliance
     5. 10xds Company Policy Compliance
@@ -539,13 +578,13 @@ report_generator = Agent(
 )
 
 
-# âœ… REPLACE EXISTING create_tasks FUNCTION WITH THIS ENHANCED VERSION
+# ✅ REPLACE EXISTING create_tasks FUNCTION WITH THIS ENHANCED VERSION
 
 def create_tasks(document_text: str, risk_criteria: list, regex_flags: dict = None, 
                  definition_analysis: dict = None, cross_ref_map: dict = None) -> list:
     """Create enhanced task workflow with hidden risk detection."""
     
-    # âœ… ADD DEFAULT VALUES if preprocessing data is missing
+    # ✅ ADD DEFAULT VALUES if preprocessing data is missing
     if regex_flags is None:
         regex_flags = {'total_flags': 0, 'flags': [], 'by_category': {}, 'severity_counts': {}}
     
@@ -578,49 +617,49 @@ List each with its clause number.""",
         agent=document_parser
     )
     
-    # âœ… TASK 2: Hidden Risk Detection
+    # ✅ TASK 2: Hidden Risk Detection
     # In create_tasks function, replace the hidden_risk_task with this optimized version:
 
     hidden_risk_task = Task(
-    description=f"""Analyze the document for hidden, disguised, or cross-referenced risks.
+        description=f"""Analyze the document for hidden, disguised, or cross-referenced risks.
 
-FULL DOCUMENT TEXT:
-{document_text}
+    FULL DOCUMENT TEXT:
+    {document_text}
 
-PREPROCESSED INTELLIGENCE:
-1. REGEX FLAGS: {json.dumps(regex_flags, indent=2)}
-2. DEFINITIONS: {json.dumps(definition_analysis, indent=2)}
-3. CROSS-REFS: {json.dumps(cross_ref_map, indent=2)}
+    PREPROCESSED INTELLIGENCE:
+    1. REGEX FLAGS: {json.dumps(regex_flags, indent=2)}
+    2. DEFINITIONS: {json.dumps(definition_analysis, indent=2)}
+    3. CROSS-REFS: {json.dumps(cross_ref_map, indent=2)}
 
-CRITICAL: Keep output CONCISE to preserve token budget for counter-proposals.
+    CRITICAL: Keep output CONCISE to preserve token budget for counter-proposals.
 
-For each confirmed hidden risk, use this COMPACT format:
+    For each confirmed hidden risk, use this COMPACT format:
 
- HIDDEN TRAP #1: [Name]
-Primary Clause: [Clause number only, e.g., "Clause 14" - NO full quote]
-Hidden Mechanism: [Type in 3-5 words]
-How It Works: [1 sentence max, 15-20 words]
-Real Meaning: [1 sentence max, 15-20 words - focus on business impact]
-Severity: [CRITICAL/HIGH/MEDIUM/LOW]
-Detection Method: [Regex/LLM/Definition/Cross-ref]
-Confidence: [0.0-1.0]
+    HIDDEN TRAP #1: [Name]
+    Primary Clause: [Clause number only, e.g., "Clause 14" - NO full quote]
+    Hidden Mechanism: [Type in 3-5 words]
+    How It Works: [1 sentence max, 15-20 words]
+    Real Meaning: [1 sentence max, 15-20 words - focus on business impact]
+    Severity: [CRITICAL/HIGH/MEDIUM/LOW]
+    Detection Method: [Regex/LLM/Definition/Cross-ref]
+    Confidence: [0.0-1.0]
 
-RULES FOR BREVITY:
-- NO full clause quotes (just reference clause number)
-- Maximum 2 sentences total per trap
-- Focus on WHAT the risk is, not HOW you found it
-- Prioritize top 5-7 risks only (skip minor LOW risks)
-- Combine similar risks into one entry
+    RULES FOR BREVITY:
+    - NO full clause quotes (just reference clause number)
+    - Maximum 2 sentences total per trap
+    - Focus on WHAT the risk is, not HOW you found it
+    - Prioritize top 5-7 risks only (skip minor LOW risks)
+    - Combine similar risks into one entry
 
-PRIORITIZATION (report max 7 traps):
-1. CRITICAL: Combined risks with high business impact
-2. HIGH: Definitional traps + liability issues
-3. MEDIUM: Single-clause risks
-4. Skip LOW severity unless uniquely dangerous
-""",
-    expected_output="Concise hidden risk summary (max 7 risks) with clause references only, no full quotes, max 2 sentences per risk",
-    agent=hidden_clause_detector,
-    context=[parse_task]
+    PRIORITIZATION (report max 7 traps):
+    1. CRITICAL: Combined risks with high business impact
+    2. HIGH: Definitional traps + liability issues
+    3. MEDIUM: Single-clause risks
+    4. Skip LOW severity unless uniquely dangerous
+    """,
+        expected_output="Concise hidden risk summary (max 7 risks) with clause references only, no full quotes, max 2 sentences per risk",
+        agent=hidden_clause_detector,
+        context=[parse_task]
 )
     # TASK 3: Jurisdiction Analysis
     jurisdiction_task = Task(
@@ -664,9 +703,9 @@ Check for:
 4. Jurisdiction concerns (enforceability in India)
 
 For each check:
-- If COMPLIANT: State "âœ“ COMPLIANT: [item]" with evidence
-- If VIOLATION: State "âœ— VIOLATION: [item]" with severity (BLOCKING/HIGH/MEDIUM) and explanation
-- If RISK: State "âš  RISK: [item]" with concern
+- If COMPLIANT: State "✓ COMPLIANT: [item]" with evidence
+- If VIOLATION: State "✗ VIOLATION: [item]" with severity (BLOCKING/HIGH/MEDIUM) and explanation
+- If RISK: State "⚠ RISK: [item]" with concern
 
 Use the jurisdiction classification from previous task to determine strictness level.
 """,
@@ -706,9 +745,9 @@ Check for:
    - Governing law preference
 
 For each:
-- If BLOCKING VIOLATION found: Flag as "ðŸš« BLOCKING: [issue]"
-- If PROTECTION MISSING: Flag as "âœ— MISSING: [protection]" with severity
-- If PREFERENCE GAP: Flag as "â„¹ PREFERENCE: [item]"
+- If BLOCKING VIOLATION found: Flag as "🚫 BLOCKING: [issue]"
+- If PROTECTION MISSING: Flag as "✗ MISSING: [protection]" with severity
+- If PREFERENCE GAP: Flag as "ℹ PREFERENCE: [item]"
 """,
         expected_output="10xds policy compliance report categorized by severity",
         agent=company_policy_validator,
@@ -717,9 +756,9 @@ For each:
     
     # TASK 6: Universal Criteria Evaluation
     evaluate_task = Task(
-        description=f"""Evaluate the document against universal protective criteria.
+    description=f"""Evaluate the document against universal protective criteria.
 
-PROTECTIVE CRITERIA:
+PROTECTIVE CRITERIA ({len(risk_criteria)} total):  # ✅ FIXED
 {criteria_text}
 
 FULL DOCUMENT TEXT:
@@ -739,26 +778,26 @@ After checking all criteria:
 COUNT:
 - F = Protections FOUND
 - M = Protections MISSING
-- T = Total criteria
+- T = Total criteria ({len(risk_criteria)})  # ✅ FIXED
 
-Verify: F + M = T
+Verify: F + M = {len(risk_criteria)}  # ✅ FIXED
 
 CALCULATE RISK:
-RISK_PERCENT = (M / T) * 100
+RISK_PERCENT = (M / {len(risk_criteria)}) * 100  # ✅ FIXED
 
 Determine Risk Level (STRICT MATCHING):
 - 0-33%: LOW RISK
 - 34-66%: MODERATE RISK
 - 67-100%: HIGH RISK
 """,
-        expected_output="Universal criteria assessment with risk calculation",
-        agent=risk_evaluator,
-        context=[parse_task]
-    )
+    expected_output="Universal criteria assessment with risk calculation",
+    agent=risk_evaluator,
+    context=[parse_task]
+)
     
     # TASK 7: Consolidated Risk Assessment
     consolidated_risk_task = Task(
-        description="""Consolidate ALL compliance findings and calculate overall risk.
+    description="""Consolidate ALL compliance findings and calculate overall risk.
 
 Combine findings from:
 1. HIDDEN RISKS (regex-validated + definitional + cross-reference traps)
@@ -767,80 +806,112 @@ Combine findings from:
 4. 10xds company policy compliance (business risks)
 5. Universal NDA criteria (protective coverage)
 
-OVERALL RISK LOGIC:
-- If ANY ðŸš« BLOCKING violation exists â†’ Automatic HIGH RISK
-- Otherwise, calculate weighted risk score:
-  * BLOCKING/CRITICAL violations = 10 points each
-  * HIGH severity issues = 3 points each
-  * MEDIUM severity issues = 2 points each
-  * LOW severity issues = 1 point each
-  * Missing protections = 2 points each
+RISK SCORING LOGIC (STRICT PERCENTAGE-BASED):
 
-Risk Level:
-- 0-10 points: LOW RISK
-- 11-25 points: MODERATE RISK
-- 26+ points: HIGH RISK
+STEP 1: Calculate Weighted Points
+- BLOCKING/CRITICAL violations = 15 points each
+- HIGH severity issues = 10 points each
+- MEDIUM severity issues = 5 points each
+- LOW severity issues = 2 points each
+- Missing protections = 3 points each
+
+STEP 2: Calculate Risk Percentage
+Risk_Percentage = (Total_Points / Max_Possible_Points) * 100
+
+Where Max_Possible_Points = 100 (normalized scale)
+
+STEP 3: Determine Risk Level (STRICT BOUNDARIES):
+- 0-33%: LOW RISK
+- 34-66%: MODERATE RISK
+- 67-100%: HIGH RISK
+
+CRITICAL RULES:
+1. NO OVERRIDES - Use only the percentage thresholds above
+2. If multiple BLOCKING issues exist, they contribute points but don't auto-trigger HIGH RISK
+3. Risk level must EXACTLY match the percentage bracket
+4. Document all point calculations for transparency
+
+EXAMPLE CALCULATION:
+- 2 HIGH severity issues = 20 points
+- 3 MEDIUM severity issues = 15 points
+- 1 Missing protection = 3 points
+- Total = 38 points
+- Risk Percentage = 38%
+- Risk Level = MODERATE RISK (34-66% bracket)
 
 Provide:
-- Overall risk level and score
+- Overall risk percentage (0-100)
+- Risk level (LOW/MODERATE/HIGH) matching percentage bracket
+- Complete point breakdown showing all calculations
 - Category breakdown (Hidden risks / Indian law / Company policy / Universal criteria)
 - Top 3 critical concerns
 - Jurisdiction risk summary
 """,
-        expected_output="Comprehensive risk assessment with weighted scoring across all dimensions",
-        agent=risk_evaluator,
-        context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, company_policy_task, evaluate_task]
-    )
+    expected_output="Risk assessment with strict percentage-based classification, detailed point breakdown, and matching risk level",
+    agent=risk_evaluator,
+    context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, company_policy_task, evaluate_task]
+)
     
     # TASK 8: Mitigation Recommendations
     mitigation_task = Task(
     description="""
-CRITICAL: Generate counter-proposals in EXACT format below. NO preamble, NO explanations.
+Generate counter-proposals in EXACT format. START IMMEDIATELY with proposals, NO preamble.
 
-START YOUR RESPONSE WITH: ---PROPOSAL START---
-
-FORMAT (MANDATORY):
+For ALL identified issues from previous tasks, create proposals using THIS EXACT FORMAT:
 
 ---PROPOSAL START---
-Name: [Short name]
+Name: [Short descriptive name, max 8 words]
 Priority: [BLOCKING|HIGH|MEDIUM|LOW]
-Issue: [Problem statement]
-Clause: [Complete legal text in 2-4 sentences]
-Benefit: [Why this helps]
+Issue: [1 sentence problem statement]
+Clause: [Complete legal text in 2-4 sentences with proper punctuation]
+Benefit: [1 sentence benefit statement]
 ---PROPOSAL END---
 
-Generate 5-10 proposals for:
-1. Any BLOCKING or CRITICAL issues (Priority: BLOCKING)
-2. All missing mandatory protections (Priority: HIGH)  
-3. All HIGH severity hidden risks (Priority: HIGH)
-4. Key preference gaps (Priority: MEDIUM/LOW)
+MANDATORY RULES:
+1. Start your response with: ---PROPOSAL START---
+2. NO introduction, NO preamble, NO explanations before first proposal
+3. Each proposal MUST have all 5 fields (Name, Priority, Issue, Clause, Benefit)
+4. Clause field must be 2-4 complete sentences of contract language
+5. End each proposal with: ---PROPOSAL END---
+6. Generate 5-8 proposals minimum
 
-Based on findings from previous tasks, create counter-proposals that:
-- Address hidden risks detected
-- Fill missing protections gaps
-- Fix Indian law compliance issues
-- Resolve company policy violations
+Generate proposals for (in priority order):
+1. Any BLOCKING/CRITICAL issues (Priority: BLOCKING)
+2. Missing mandatory protections (Priority: HIGH)
+3. HIGH severity hidden risks (Priority: HIGH)  
+4. Indian law violations (Priority: HIGH/MEDIUM)
+5. Company policy gaps (Priority: MEDIUM)
+6. Key preference gaps (Priority: LOW)
 
-REMEMBER: Start immediately with ---PROPOSAL START--- with NO preamble.
+EXAMPLE FORMAT:
+---PROPOSAL START---
+Name: Data Protection Compliance Clause
+Priority: HIGH
+Issue: No data protection clause exists, exposing company to legal violations.
+Clause: Each party shall comply with all applicable data protection laws including the Information Technology Act, 2000, and the Digital Personal Data Protection Act, 2023, in connection with any personal data processed under this Agreement. The Receiving Party shall implement appropriate technical and organizational measures to protect personal data against unauthorized access, loss, or disclosure. Both parties agree to notify each other within 24 hours of any data breach.
+Benefit: Ensures compliance with Indian data protection laws and limits liability exposure.
+---PROPOSAL END---
+
+START YOUR RESPONSE NOW WITH ---PROPOSAL START--- (no other text before it).
 """,
-    expected_output="Multiple counter-proposals with ---PROPOSAL START/END--- markers, each containing Name, Priority, Issue, Clause, and Benefit fields",
+    expected_output="Counter-proposals with strict ---PROPOSAL START/END--- markers, each with Name, Priority, Issue, Clause, and Benefit fields",
     agent=mitigation_advisor,
-    context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, company_policy_task, evaluate_task, consolidated_risk_task]
+    context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, 
+             company_policy_task, evaluate_task, consolidated_risk_task]
 )
     # TASK 9: Final Report
     report_task = Task(
-        description="""Create the FINAL COMPREHENSIVE REPORT in this structure:
+    description="""Create the FINAL COMPREHENSIVE REPORT in this structure:
 
 === LEGAL DOCUMENT RISK ASSESSMENT REPORT ===
 
 EXECUTIVE SUMMARY:
 [2-3 sentences: Overall risk level, main concerns, recommendation]
 
-ðŸŽ­ HIDDEN & DISGUISED RISKS:
+🎭 HIDDEN & DISGUISED RISKS:
 [List all hidden traps found by hidden_clause_detector agent]
-[Format: Use the ðŸŽ­ HIDDEN TRAP format with all details]
+[Format: Use the 🎭 HIDDEN TRAP format with all fields: Name, Primary Clause, Hidden Mechanism, How It Works, Real Meaning, Severity, Detection Method, Confidence]
 [Group by: Definitional Traps / Cross-Reference Traps / Combined Risks]
-[Show detection methodology for each]
 
 Detection Summary:
 - Total Hidden Risks Found: [N]
@@ -859,29 +930,32 @@ Compliance Level Required: [STRICT / MODERATE / BASIC]
 Jurisdiction Risks: [list risks if any]
 
 INDIAN CONTRACT ACT COMPLIANCE:
-âœ“ Compliant Items:
+✓ Compliant Items:
 [List items that comply with Indian Contract Act]
 
-âœ— Violations Found:
+✗ Violations Found:
 [List violations with severity: BLOCKING/HIGH/MEDIUM]
 
-âš  Risks Identified:
+⚠ Risks Identified:
 [List enforcement or legal risks]
 
 10XDS COMPANY POLICY COMPLIANCE:
-ðŸš« Blocking Violations:
+🚫 Blocking Violations:
 [List any blocking issues - if present, recommend DO NOT SIGN]
 
-âœ— Missing Mandatory Protections:
+✗ Missing Mandatory Protections:
 [List missing protections with severity]
 
-â„¹ Preference Gaps:
+ℹ Preference Gaps:
 [List negotiable preference items]
 
 UNIVERSAL NDA CRITERIA ASSESSMENT:
 Protections Found: [F] out of [T]
 Protections Missing: [M] out of [T]
-[Brief list of key missing protections]
+1. [First missing protection name]
+2. [Second missing protection name]
+3. [etc...]
+FORMAT: Use NUMBERED LIST (1. 2. 3.) for missing protections, NOT bullet points (-)
 
 OVERALL RISK ASSESSMENT:
 Risk Score: [X] points
@@ -900,7 +974,9 @@ RECOMMENDATION:
 [2-3 sentences explaining why, highlighting top concerns]
 
 RECOMMENDED COUNTER-PROPOSALS:
-[List all modifications in priority order with Priority levels]
+[CRITICAL: Copy ALL proposals from mitigation_advisor task output. Use the EXACT ---PROPOSAL START/END--- format.]
+[DO NOT summarize or reformat. Include the full Name, Priority, Issue, Clause, and Benefit for each proposal.]
+[Minimum 5 proposals required.]
 
 CRITICAL RULES:
 - NO decorative lines
@@ -908,13 +984,15 @@ CRITICAL RULES:
 - Risk level in summary MUST match calculated percentage
 - Ensure all sections are present
 - Keep concise and professional
+- MUST include complete counter-proposals section with all proposals from mitigation task
 """,
-        expected_output="Complete formatted report with all compliance dimensions including hidden risks",
-        agent=report_generator,
-        context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, company_policy_task, evaluate_task, consolidated_risk_task, mitigation_task]
-    )
-    
-    # âœ… RETURN ALL TASKS
+    expected_output="Complete formatted report with all compliance dimensions including hidden risks AND all counter-proposals from mitigation task in ---PROPOSAL START/END--- format",
+    agent=report_generator,
+    context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, 
+             company_policy_task, evaluate_task, consolidated_risk_task, mitigation_task]
+)
+
+    # ✅ RETURN ALL TASKS
     return [
         parse_task,
         hidden_risk_task,
@@ -934,7 +1012,7 @@ def analyze_document(file_path: str, criteria: list) -> dict:
     text = load_document(file_path)
 
     # ==========================================
-    # âœ… STEP 1 â€” NORMALIZE CRITERIA
+    # ✅ STEP 1 — NORMALIZE CRITERIA
     # ==========================================
     if not criteria:
         criteria = []
@@ -952,71 +1030,71 @@ def analyze_document(file_path: str, criteria: list) -> dict:
             normalized.append(str(item))
 
     criteria = normalized
-    print(f"ðŸ“‹ Analyzing with {len(criteria)} criteria")
+    print(f"📋 Analyzing with {len(criteria)} criteria")
 
     # ==========================================
-    # âœ… STEP 2 â€” PHASE 1: PRE-ANALYSIS SCANNING
+    # ✅ STEP 2 — PHASE 1: PRE-ANALYSIS SCANNING
     # ==========================================
     print("\n" + "="*60)
-    print("ðŸ” PHASE 1: PRE-ANALYSIS SCANNING")
+    print("🔍 PHASE 1: PRE-ANALYSIS SCANNING")
     print("="*60)
 
     # -------------------------------
-    # ðŸ”Ž Regex risk detection
+    # 🔎 Regex risk detection
     # -------------------------------
-    print("ðŸ“ Running regex pattern scanner...")
+    print("📍 Running regex pattern scanner...")
     regex_flags = scan_risky_patterns(text)
 
-    print(f"âœ“ Found {regex_flags['total_flags']} potential risks")
+    print(f"✓ Found {regex_flags['total_flags']} potential risks")
     print(f"  - CRITICAL: {regex_flags['severity_counts']['CRITICAL']}")
     print(f"  - HIGH: {regex_flags['severity_counts']['HIGH']}")
     print(f"  - MEDIUM: {regex_flags['severity_counts']['MEDIUM']}")
     print(f"  - LOW: {regex_flags['severity_counts']['LOW']}")
 
     # -------------------------------
-    # ðŸ“– Definition analysis
+    # 📖 Definition analysis
     # -------------------------------
-    print("\nðŸ“– Analyzing definitions section...")
+    print("\n📖 Analyzing definitions section...")
     definition_analysis = analyze_definitions(text)
 
     if definition_analysis["found"]:
-        print(f"âœ“ Found {len(definition_analysis['definitions'])} definitions")
+        print(f"✓ Found {len(definition_analysis['definitions'])} definitions")
         print(f"  - Risky definitions: {len(definition_analysis['risky_definitions'])}")
         print(f"  - Circular definitions: {len(definition_analysis['circular_definitions'])}")
     else:
-        print("âš  No definitions section detected")
+        print("⚠ No definitions section detected")
 
     # -------------------------------
-    # ðŸ”— Cross-reference mapping
+    # 🔗 Cross-reference mapping
     # -------------------------------
-    print("\nðŸ”— Mapping cross-references...")
+    print("\n🔗 Mapping cross-references...")
     cross_ref_map = map_cross_references(text)
 
-    print(f"âœ“ Mapped {cross_ref_map['clause_count']} clauses")
+    print(f"✓ Mapped {cross_ref_map['clause_count']} clauses")
     print(f"  - Risk clusters found: {len(cross_ref_map['risk_clusters'])}")
     print(f"  - Distant references: {len(cross_ref_map['distant_references'])}")
     print(f"  - Highly connected clauses: {len(cross_ref_map['highly_connected'])}")
 
     # ==========================================
-    # ðŸ¤– PHASE 2 â€” AI AGENT ANALYSIS
+    # 🤖 PHASE 2 — AI AGENT ANALYSIS
     # ==========================================
     print("\n" + "="*60)
-    print("ðŸ¤– PHASE 2: AI AGENT ANALYSIS")
+    print("🤖 PHASE 2: AI AGENT ANALYSIS")
     print("="*60)
 
     # Create tasks (passing preprocessing results)
     tasks = create_tasks(
         text,
         criteria,
-        regex_flags,          # âœ… NEW
-        definition_analysis,   # âœ… NEW
-        cross_ref_map          # âœ… NEW
+        regex_flags,          # ✅ NEW
+        definition_analysis,   # ✅ NEW
+        cross_ref_map          # ✅ NEW
     )
 
     crew = Crew(
         agents=[
             document_parser,
-            hidden_clause_detector,   # âœ… NEW AGENT ADDED
+            hidden_clause_detector,   # ✅ NEW AGENT ADDED
             jurisdiction_analyzer,
             indian_law_validator,
             company_policy_validator,
@@ -1033,23 +1111,33 @@ def analyze_document(file_path: str, criteria: list) -> dict:
     # Run agents
     result = crew.kickoff()
     final_output = getattr(result, 'output', str(result))
-    logger.info(f" LLM OUTPUT LENGTH: {len(final_output)} characters")
-    logger.info(f" OUTPUT PREVIEW (last 500 chars):\n{final_output[-500:]}")
+    debug_file = Path("debug_llm_output.txt")
+    with open(debug_file, 'w', encoding='utf-8') as f:
+        f.write("=== FULL LLM OUTPUT ===\n\n")
+        f.write(final_output)
+        f.write("\n\n=== END OUTPUT ===")
+    logger.info(f"📝 Saved raw LLM output to {debug_file}")
 
-# Check if output was truncated
-    if "COUNTER-PROPOSALS" in final_output.upper() and "Modification" not in final_output:
-        logger.error(" CRITICAL: Counter-proposals section exists but no proposals found!")
-        logger.error("Likely cause: LLM output truncated due to token limits")
+    # Check if counter-proposals section exists
+    if "RECOMMENDED COUNTER-PROPOSALS" in final_output:
+        # Extract just the counter-proposals section for analysis
+        proposals_start = final_output.find("RECOMMENDED COUNTER-PROPOSALS")
+        proposals_section = final_output[proposals_start:proposals_start+2000]
+        logger.info(f"📋 Counter-proposals section preview:\n{proposals_section}")
+    else:
+        logger.error("❌ No counter-proposals section found in LLM output!")
+        logger.error(f"Output length: {len(final_output)} chars")
+        logger.error(f"Last 500 chars: {final_output[-500:]}")
 
 
     print("\n" + "=" * 60)
-    print("âœ… ANALYSIS COMPLETE - REPORT:")
+    print("✅ ANALYSIS COMPLETE - REPORT:")
     print("=" * 60)
     print(final_output)
     print("=" * 60)
 
     # ==========================================
-    # ðŸ§© STEP 3 â€” Parse LLM Output into JSON
+    # 🧩 STEP 3 — Parse LLM Output into JSON
     # ==========================================
     json_data = parse_report_to_json(
         final_output,
@@ -1059,9 +1147,10 @@ def analyze_document(file_path: str, criteria: list) -> dict:
         definition_analysis,   # NEW
         cross_ref_map          # NEW
     )
+    json_data = validate_and_fix_risk_level(json_data)
 
     # ==========================================
-    # ðŸ” STEP 4 â€” Validate JSON
+    # 🔍 STEP 4 — Validate JSON
     # ==========================================
     is_valid, validation_message = validate_json_against_schema(
         json_data,
@@ -1119,13 +1208,13 @@ def validate_json_against_schema(json_data: dict, schema: dict) -> tuple:
     try:
         from jsonschema import validate, ValidationError
         validate(instance=json_data, schema=schema)
-        return True, "âœ“ JSON data is valid according to schema"
+        return True, "✓ JSON data is valid according to schema"
     except ImportError:
-        return True, "âš  jsonschema library not installed. Install with: pip install jsonschema"
+        return True, "⚠ jsonschema library not installed. Install with: pip install jsonschema"
     except ValidationError as e:
-        return False, f"âœ— Validation Error: {e.message}"
+        return False, f"✗ Validation Error: {e.message}"
     except Exception as e:
-        return False, f"âœ— Unexpected error during validation: {str(e)}"
+        return False, f"✗ Unexpected error during validation: {str(e)}"
 
 
 def save_json_report(json_data: dict, document_path: str):
@@ -1142,7 +1231,7 @@ def save_json_report(json_data: dict, document_path: str):
         json.dump(json_data, f, indent=2, ensure_ascii=False)
 
     print("=" * 60)
-    print(f"âœ“ JSON data saved to: {json_path}")
+    print(f"✓ JSON data saved to: {json_path}")
 
     # Validate JSON against imported schema
     is_valid, message = validate_json_against_schema(json_data, RISK_ANALYSIS_SCHEMA)
@@ -1166,7 +1255,7 @@ def save_json_report(json_data: dict, document_path: str):
         json.dump(json_data, f, indent=2, ensure_ascii=False)
 
     print("=" * 60)
-    print(f"âœ“ JSON data saved to: {json_path}")
+    print(f"✓ JSON data saved to: {json_path}")
 
     # Validate JSON against imported schema
     is_valid, message = validate_json_against_schema(json_data, RISK_ANALYSIS_SCHEMA)
@@ -1227,14 +1316,18 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     current_trap = None
     trap_number = 0
 
+    # Updated end markers to be more precise
     END_MARKERS = [
-        "DETECTION SUMMARY",
+        "DETECTION SUMMARY:",
         "VENDOR & JURISDICTION",
         "INDIAN CONTRACT ACT",
         "10XDS COMPANY",
         "UNIVERSAL NDA",
-        "COUNTER-PROPOSALS"
+        "COUNTER-PROPOSALS",
+        "RECOMMENDED COUNTER"
     ]
+
+    logger.info("🔍 Starting hidden risks extraction...")
 
     for i, raw_line in enumerate(lines):
         stripped = raw_line.strip()
@@ -1242,17 +1335,19 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             continue
         upper = stripped.upper()
 
-        # Start hidden section
+        # ===== START HIDDEN SECTION =====
         if not in_hidden_section:
             if "HIDDEN" in upper and ("RISK" in upper or "TRAP" in upper):
                 in_hidden_section = True
-                logger.info(f"  Line {i}: Hidden Risks section started")
-
-                # handle header that contains trap on same line
+                logger.info(f"  ✅ Line {i}: Hidden Risks section started")
+                
+                # Check if trap starts on same line as header
                 trap_match = re.search(r'HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
                 if trap_match:
                     trap_number = int(trap_match.group(1))
                     trap_name = trap_match.group(2).strip()
+                    # Remove "Name:" prefix if present
+                    trap_name = re.sub(r'^Name:\s*', '', trap_name, flags=re.IGNORECASE)
                     current_trap = {
                         'name': trap_name,
                         'primary_clause': '',
@@ -1260,29 +1355,35 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                         'real_meaning': '',
                         'severity': ''
                     }
+                    logger.info(f"    🎭 Found trap on header line: {trap_name}")
                 continue
 
-        # End hidden section
-        if in_hidden_section and any(marker in upper for marker in END_MARKERS):
-            if current_trap and current_trap.get('name'):
-                hidden_risks.append(current_trap)
-                logger.info(f"  Line {i}: Final trap saved")
-            logger.info(f"  Line {i}: Hidden Risks section ended")
-            break
-
-        # Inside hidden section
+        # ===== END HIDDEN SECTION =====
         if in_hidden_section:
-
-            # New trap header detection (own line)
-            trap_match = re.search(r'HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
-            if trap_match:
-                # save previous
+            # Check if we've reached the end
+            if any(marker in upper for marker in END_MARKERS):
                 if current_trap and current_trap.get('name'):
                     hidden_risks.append(current_trap)
-                    logger.info(f"  Trap #{trap_number} saved")
+                    logger.info(f"  ✅ Saved final trap: {current_trap['name']}")
+                logger.info(f"  🛑 Line {i}: Hidden Risks section ended")
+                break
 
+        # ===== PARSE TRAP CONTENT =====
+        if in_hidden_section:
+            
+            # Check for new trap starting (either with ** or without)
+            trap_match = re.search(r'\*?\*?HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
+            if trap_match:
+                # Save previous trap
+                if current_trap and current_trap.get('name'):
+                    hidden_risks.append(current_trap)
+                    logger.info(f"  ✅ Saved trap #{trap_number}: {current_trap['name']}")
+                
                 trap_number = int(trap_match.group(1))
                 trap_name = trap_match.group(2).strip()
+                # Remove "Name:" prefix if present
+                trap_name = re.sub(r'^Name:\s*', '', trap_name, flags=re.IGNORECASE)
+                
                 current_trap = {
                     'name': trap_name,
                     'primary_clause': '',
@@ -1290,53 +1391,55 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     'real_meaning': '',
                     'severity': ''
                 }
+                logger.info(f"    🎭 New trap #{trap_number}: {trap_name}")
                 continue
 
-            # parse fields for current trap
+            # Parse trap fields
             if current_trap:
+                
+                # Name field (if separate line)
+                if stripped.startswith("Name:"):
+                    name = stripped.replace("Name:", "", 1).strip()
+                    if name and not current_trap.get('name'):
+                        current_trap['name'] = name
+                        logger.info(f"      📝 Name: {name}")
+                    continue
 
-                # Primary Clause (short / single-line format)
+                # Primary Clause
                 if stripped.startswith("Primary Clause:"):
                     content = stripped.replace("Primary Clause:", "", 1).strip()
-                    # append if already exists (handles multiple lines if any)
-                    if current_trap.get('primary_clause'):
-                        current_trap['primary_clause'] += " " + content
-                    else:
-                        current_trap['primary_clause'] = content
-
-                    # extract clause number if present
-                    clause_num_match = re.search(r'Clause\s+(\d+[A-Za-z]?)', content, re.IGNORECASE)
-                    if clause_num_match:
-                        current_trap['clause_number'] = clause_num_match.group(1)
-
-                    logger.info("    Primary Clause parsed")
+                    current_trap['primary_clause'] = content
+                    
+                    # Extract clause number
+                    clause_match = re.search(r'Clause\s+(\d+[A-Za-z]?)', content, re.IGNORECASE)
+                    if clause_match:
+                        current_trap['clause_number'] = clause_match.group(1)
+                    
+                    logger.info(f"      📄 Primary Clause: {content[:50]}...")
                     continue
 
                 # Real Meaning / Real Impact
                 if re.match(r'^Real (Meaning|Impact)', stripped, re.IGNORECASE):
                     content = re.sub(r'^Real (Meaning|Impact)[:\s]*', '', stripped, flags=re.IGNORECASE).strip()
-                    # append if already exists
-                    if current_trap.get('real_meaning'):
-                        current_trap['real_meaning'] += " " + content
-                    else:
-                        current_trap['real_meaning'] = content
-                    logger.info("    Real Meaning parsed")
+                    current_trap['real_meaning'] = content
+                    logger.info(f"      💡 Real Meaning: {content[:50]}...")
                     continue
 
                 # Severity
                 if stripped.startswith("Severity:"):
                     severity_raw = stripped.replace("Severity:", "", 1).strip()
+                    # Remove any parenthetical notes
                     severity_clean = re.sub(r'\s*\(.*?\)\s*', '', severity_raw).strip()
                     current_trap['severity'] = severity_clean
-                    logger.info("    Severity parsed")
+                    logger.info(f"      ⚠️ Severity: {severity_clean}")
                     continue
 
-    # Save last trap if present
+    # Save last trap if exists
     if current_trap and current_trap.get('name'):
         hidden_risks.append(current_trap)
-        logger.info(f"  Last trap #{trap_number} saved")
+        logger.info(f"  ✅ Saved last trap: {current_trap['name']}")
 
-    # Deduplicate based on clause number or clause snippet
+    # ===== DEDUPLICATION =====
     seen_clauses = set()
     deduplicated_risks = []
     for risk in hidden_risks:
@@ -1348,8 +1451,10 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             logger.info(f"  Duplicate removed: {risk.get('name', '<unnamed>')}")
 
     hidden_risks = deduplicated_risks
-    logger.info(f"  Final Hidden Risks Extracted: {len(hidden_risks)}")
-
+    
+    logger.info(f" FINAL: Extracted {len(hidden_risks)} hidden risks")
+    for idx, risk in enumerate(hidden_risks, 1):
+        logger.info(f"  {idx}. {risk.get('name', 'Unknown')} - {risk.get('severity', 'N/A')}")
 
 
 
@@ -1385,12 +1490,12 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
         # Start Indian Law section
         if "INDIAN CONTRACT ACT" in upper and "COMPLIANCE" in upper:
             in_indian_section = True
-            logger.info(f"ðŸ“‹ Line {i}: Started Indian Law section")
+            logger.info(f"📋 Line {i}: Started Indian Law section")
             continue
 
         # End Indian Law section
         if in_indian_section and any(marker in upper for marker in ["10XDS COMPANY", "UNIVERSAL NDA", "OVERALL RISK"]):
-            logger.info(f"âœ… Line {i}: Ended Indian Law section")
+            logger.info(f"✅ Line {i}: Ended Indian Law section")
             logger.info(
                 f"   Parsed: {len(indian_law['compliant_items'])} compliant, "
                 f"{len(indian_law['violations'])} violations, "
@@ -1400,19 +1505,19 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         if in_indian_section and stripped:
             # Detect subsection headers
-            if "COMPLIANT ITEMS" in upper or stripped.startswith("âœ“"):
+            if "COMPLIANT ITEMS" in upper or stripped.startswith("✓"):
                 current_section = "compliant_items"
-                logger.info(f"  âœ“ Line {i}: Switched to compliant_items")
+                logger.info(f"  ✓ Line {i}: Switched to compliant_items")
                 continue
 
-            if "VIOLATIONS FOUND" in upper or stripped.startswith("âœ—"):
+            if "VIOLATIONS FOUND" in upper or stripped.startswith("✗"):
                 current_section = "violations"
-                logger.info(f"  âœ— Line {i}: Switched to violations")
+                logger.info(f"  ✗ Line {i}: Switched to violations")
                 continue
 
-            if "RISKS IDENTIFIED" in upper or stripped.startswith("âš "):
+            if "RISKS IDENTIFIED" in upper or stripped.startswith("⚠"):
                 current_section = "risks"
-                logger.info(f"  âš  Line {i}: Switched to risks")
+                logger.info(f"  ⚠ Line {i}: Switched to risks")
                 continue
 
             # Skip "None" entries
@@ -1422,11 +1527,11 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             # Add content to current section
             if current_section and len(stripped) > 5:
                 cleaned = stripped
-                cleaned = re.sub(r'^[âœ“âœ—âš \s\-â€¢]+', '', cleaned).strip()
+                cleaned = re.sub(r'^[✓✗⚠\s\-•]+', '', cleaned).strip()
 
                 if cleaned:
                     indian_law[current_section].append(cleaned)
-                    logger.info(f"    â†’ Added: {cleaned[:60]}...")
+                    logger.info(f"    → Added: {cleaned[:60]}...")
 
     # ============================
     # COMPANY POLICY - FIXED
@@ -1446,12 +1551,12 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
         # Start Company Policy section
         if "COMPANY POLICY COMPLIANCE" in upper or ("10XDS" in upper and "COMPLIANCE" in upper):
             in_company_section = True
-            logger.info(f"ðŸ“‹ Line {i}: Started Company Policy section")
+            logger.info(f"📋 Line {i}: Started Company Policy section")
             continue
 
         # End Company Policy section
         if in_company_section and any(marker in upper for marker in ["UNIVERSAL NDA", "OVERALL RISK", "RECOMMENDATION"]):
-            logger.info(f"âœ… Line {i}: Ended Company Policy section")
+            logger.info(f"✅ Line {i}: Ended Company Policy section")
             logger.info(
                 f"   Parsed: {len(company_policy['blocking_violations'])} blocking, "
                 f"{len(company_policy['missing_protections'])} missing, "
@@ -1461,19 +1566,19 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         if in_company_section and stripped:
             # Detect subsection headers
-            if "BLOCKING VIOLATIONS" in upper or stripped.startswith("ðŸš«"):
+            if "BLOCKING VIOLATIONS" in upper or stripped.startswith("🚫"):
                 current_section = "blocking_violations"
-                logger.info(f"  ðŸš« Line {i}: Switched to blocking_violations")
+                logger.info(f"  🚫 Line {i}: Switched to blocking_violations")
                 continue
 
             if "MISSING" in upper and "PROTECTIONS" in upper:
                 current_section = "missing_protections"
-                logger.info(f"  âœ— Line {i}: Switched to missing_protections")
+                logger.info(f"  ✗ Line {i}: Switched to missing_protections")
                 continue
 
-            if "PREFERENCE GAPS" in upper or stripped.startswith("â„¹"):
+            if "PREFERENCE GAPS" in upper or stripped.startswith("ℹ"):
                 current_section = "preference_gaps"
-                logger.info(f"  â„¹ Line {i}: Switched to preference_gaps")
+                logger.info(f"  ℹ Line {i}: Switched to preference_gaps")
                 continue
 
             # Skip "None" entries
@@ -1483,11 +1588,11 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             # Add content to current section
             if current_section and len(stripped) > 5:
                 cleaned = stripped
-                cleaned = re.sub(r'^[ðŸš«âœ—â„¹\s\-â€¢]+', '', cleaned).strip()
+                cleaned = re.sub(r'^[🚫✗ℹ\s\-•]+', '', cleaned).strip()
 
                 if cleaned:
                     company_policy[current_section].append(cleaned)
-                    logger.info(f"    â†’ Added: {cleaned[:60]}...")
+                    logger.info(f"    → Added: {cleaned[:60]}...")
 
 
 
@@ -1500,16 +1605,15 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # First, extract the counts from the report
     found_count = 0
     missing_count = 0
-    total_count = 10  # Default to 10 universal criteria
-
+    total_count = len(criteria) 
     for line in lines:
         if "Protections Found:" in line and "out of" in line:
             match = re.search(r'(\d+)\s+out of\s+(\d+)', line)
             if match:
                 found_count = int(match.group(1))
-                total_count = int(match.group(2))
+                total_count = int(match.group(2))  # This should match len(criteria)
                 missing_count = total_count - found_count
-                logger.info(f"ðŸ“Š Protections: {found_count} found, {missing_count} missing, {total_count} total")
+                logger.info(f"📊 Protections: {found_count} found, {missing_count} missing, {total_count} total")
                 break
 
     # Now parse the actual protection details
@@ -1526,7 +1630,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             if not in_found:
                 in_found = True
                 in_missing = False
-                logger.info(f"âœ“ Line {i}: Started PROTECTIONS FOUND section")
+                logger.info(f"✓ Line {i}: Started PROTECTIONS FOUND section")
             continue
 
         # === START PROTECTIONS MISSING SECTION ===
@@ -1537,7 +1641,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             in_found = False
             in_missing = True
             current_item = None
-            logger.info(f"âœ“ Line {i}: Started PROTECTIONS MISSING section")
+            logger.info(f"✓ Line {i}: Started PROTECTIONS MISSING section")
             continue
 
         # === END PROTECTIONS SECTION ===
@@ -1545,14 +1649,14 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             if current_item:
                 protections_missing.append(current_item)
                 logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
-            logger.info(f"âœ“ Line {i}: Ended protections section")
+            logger.info(f"✓ Line {i}: Ended protections section")
             break
 
         # === PARSE FOUND PROTECTIONS ===
         if in_found and stripped:
             # New protection item (starts with number, checkmark, or "FOUND:")
             if (re.match(r'^\d+\.', stripped) or 
-                stripped.startswith("âœ“") or 
+                stripped.startswith("✓") or 
                 stripped.startswith("FOUND:")):
 
                 if current_item:
@@ -1560,7 +1664,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     logger.info(f"  Saved found protection: {current_item['name'][:50]}")
 
                 # Extract name
-                name = re.sub(r'^[\d\.\sâœ“]+|^FOUND:\s*', "", stripped)
+                name = re.sub(r'^[\d\.\s✓]+|^FOUND:\s*', "", stripped)
                 current_item = {"name": name, "clause": None, "evidence": None}
 
             # Clause line
@@ -1573,25 +1677,31 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         # === PARSE MISSING PROTECTIONS ===
         if in_missing and stripped:
-            # New missing item
-            if (re.match(r'^\d+\.', stripped) or 
-                stripped.startswith("âœ—") or 
+            
+            if (re.match(r'^[-•\*]\s+', stripped) or          # "- Item" or "• Item" or "* Item"
+                re.match(r'^\d+\.', stripped) or               # "1. Item"
+                stripped.startswith("✗") or 
                 stripped.startswith("NOT FOUND:")):
 
                 if current_item:
                     protections_missing.append(current_item)
                     logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
 
-                name = re.sub(r'^[\d\.\sâœ—]+|^NOT FOUND:\s*', "", stripped)
-                current_item = {"name": name, "risk": None}
+                
+                name = re.sub(r'^[-•\*\d\.\s✗]+|^NOT FOUND:\s*', "", stripped).strip()
+                
+                if name:  # ✅ Only create item if name is non-empty
+                    current_item = {"name": name, "risk": None}
+                    logger.info(f"    → Extracted missing protection: {name[:50]}")
 
-            # Risk line
+            # Risk line (optional sub-field)
             elif current_item and "Risk:" in stripped:
                 current_item["risk"] = stripped.split("Risk:", 1)[1].strip()
+                logger.info(f"    → Added risk: {current_item['risk'][:50]}")
 
     # === FALLBACK: Use counts if parsing failed ===
     if len(protections_found) == 0 and found_count > 0:
-        logger.warning(f"âš ï¸ Parsing failed - using count-based fallback for {found_count} found protections")
+        logger.warning(f"⚠️ Parsing failed - using count-based fallback for {found_count} found protections")
         for i in range(found_count):
             protections_found.append({
                 "name": f"Protection {i+1} (detailed parsing failed - see report)",
@@ -1600,201 +1710,122 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             })
 
     if len(protections_missing) == 0 and missing_count > 0:
-        logger.warning(f"âš ï¸ Parsing failed - using count-based fallback for {missing_count} missing protections")
+        logger.warning(f"⚠️ Parsing failed - using count-based fallback for {missing_count} missing protections")
         for i in range(missing_count):
             protections_missing.append({
                 "name": f"Missing protection {i+1} (detailed parsing failed - see report)",
                 "risk": "See detailed compliance section in report"
             })
 
-    logger.info(f"âœ… Final: {len(protections_found)} found, {len(protections_missing)} missing")
+    logger.info(f"✅ Final: {len(protections_found)} found, {len(protections_missing)} missing")
 
          # ============================
     # COUNTER PROPOSALS - FIXED PARSING
     # ============================
     counter_proposals = []
-    in_counter = False
-    current = None
-    collecting = None
 
-    # More flexible regex patterns
-    mod_header = re.compile(
-        r'^(?:Modification\s*#?)?\s*(\d+)[\.:]?\s*(.+?)(?:\s*\((HIGH|MEDIUM|LOW|BLOCKING)\s+PRIORITY\))?$',
-        re.IGNORECASE
-    )
-    mod_header_alt = re.compile(
-        r'^(?:\d+[\)\.]\s*)?(.+?)\s*(?:-\s*(HIGH|MEDIUM|LOW|BLOCKING)\s+PRIORITY)?$',
-        re.IGNORECASE
+    # Method 1: Parse strict marker format (---PROPOSAL START/END---)
+    full_text = '\n'.join(lines)
+    proposal_blocks = re.findall(
+        r'---PROPOSAL START---\s*(.*?)\s*---PROPOSAL END---',
+        full_text,
+        re.DOTALL | re.IGNORECASE
     )
 
-    suggested_start = re.compile(r'^SUGGESTED CLAUSE\s*\(START\)\s*:?\s*$', re.IGNORECASE)
-    suggested_end = re.compile(r'^SUGGESTED CLAUSE\s*\(END\)\s*:?\s*$', re.IGNORECASE)
+    logger.info(f"🔍 Found {len(proposal_blocks)} proposals with markers")
 
-    one_line_clause = re.compile(r'^(Suggested Clause|Clause)\s*:\s*(.+)$', re.IGNORECASE)
-    current_issue_re = re.compile(r'^Current Issue\s*:\s*(.+)$', re.IGNORECASE)
-    benefit_re = re.compile(r'^Benefit\s*:\s*(.+)$', re.IGNORECASE)
-    priority_re = re.compile(r'^Priority\s*:\s*(HIGH|MEDIUM|LOW|BLOCKING)$', re.IGNORECASE)
+    for idx, block in enumerate(proposal_blocks):
+        try:
+            proposal = {}
+            # Parse each field
+            name_match = re.search(r'Name:\s*(.+)', block, re.IGNORECASE)
+            priority_match = re.search(r'Priority:\s*(BLOCKING|HIGH|MEDIUM|LOW)', block, re.IGNORECASE)
+            issue_match = re.search(r'Issue:\s*(.+?)(?=Clause:|$)', block, re.DOTALL | re.IGNORECASE)
+            clause_match = re.search(r'Clause:\s*(.+?)(?=Benefit:|$)', block, re.DOTALL | re.IGNORECASE)
+            benefit_match = re.search(r'Benefit:\s*(.+)', block, re.DOTALL | re.IGNORECASE)
+            
+            if name_match and priority_match:
+                proposal['name'] = name_match.group(1).strip()
+                proposal['priority'] = priority_match.group(1).upper()
+                proposal['current_issue'] = issue_match.group(1).strip() if issue_match else "Issue not specified"
+                proposal['suggested_clause'] = clause_match.group(1).strip() if clause_match else "Clause not specified"
+                proposal['benefit'] = benefit_match.group(1).strip() if benefit_match else "Benefit not specified"
+                
+                counter_proposals.append(proposal)
+                logger.info(f"✅ Parsed proposal {idx+1}: {proposal['name'][:50]}")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to parse proposal block {idx+1}: {e}")
 
-    logger.info("ðŸ” Starting counter-proposals parsing...")
-
-    for idx, raw in enumerate(lines):
-        txt = raw.strip()
-
-        # Start counter-proposals section
-        if not in_counter:
+    # Method 2: Fallback to list-based parsing if markers failed
+    if len(counter_proposals) == 0:
+        logger.warning("⚠️ Marker-based parsing failed, trying fallback method...")
+        
+        in_counter = False
+        for line in lines:
+            txt = line.strip()
+            
+            # Start section
             if "RECOMMENDED COUNTER-PROPOSALS" in txt.upper():
                 in_counter = True
-                logger.info(f"âœ… Line {idx}: Started counter-proposals section")
-            continue
-
-        # End counter-proposals section
-        if txt.startswith("===") or "OVERALL RISK" in txt.upper():
-            if current:
-                # Clean up fields before saving
-                for f in ["current_issue", "benefit", "suggested_clause"]:
-                    if current.get(f):
-                        current[f] = current[f].strip()
-                counter_proposals.append(current)
-                logger.info(f"âœ… Saved final proposal: {current.get('name', 'Unknown')[:50]}")
-            break
-
-        # Detect new modification header
-        m = mod_header.match(txt)
-        if m:
-            # Save previous proposal
-            if current:
-                for f in ["current_issue", "benefit", "suggested_clause"]:
-                    if current.get(f):
-                        current[f] = current[f].strip()
-                counter_proposals.append(current)
-                logger.info(f"âœ… Saved proposal: {current.get('name', 'Unknown')[:50]}")
-
-            # Start new proposal
-            name = m.group(2).strip()
-            pr = m.group(3).upper() if m.group(3) else "MEDIUM"
-            current = {
-                "name": name,
-                "priority": pr,
-                "current_issue": None,
-                "benefit": None,
-                "suggested_clause": None
-            }
-            collecting = None
-            logger.info(f"ðŸ“‹ Line {idx}: New proposal - {name[:50]}")
-            continue
-
-        # Try alternative header format if no current proposal yet
-        if current is None:
-            m2 = mod_header_alt.match(txt)
-            if m2:
-                name = m2.group(1).strip()
-                pr = m2.group(2).upper() if m2.group(2) else "MEDIUM"
-                current = {
-                    "name": name,
-                    "priority": pr,
-                    "current_issue": None,
-                    "benefit": None,
-                    "suggested_clause": None
-                }
-                logger.info(f"ðŸ“‹ Line {idx}: New proposal (alt format) - {name[:50]}")
                 continue
+            
+            # End section
+            if txt.startswith("===") and in_counter:
+                break
+            
+            if in_counter:
+                # Match: "- Priority: HIGH - Name: Description"
+                match = re.match(r'[-*]?\s*Priority:\s*(BLOCKING|HIGH|MEDIUM|LOW)\s*[-–]\s*(.+?):\s*(.+)', txt, re.IGNORECASE)
+                if match:
+                    proposal = {
+                        'name': match.group(2).strip(),
+                        'priority': match.group(1).upper(),
+                        'current_issue': match.group(3).strip(),
+                        'suggested_clause': "Add appropriate clause language based on issue description.",
+                        'benefit': "Addresses identified compliance gap."
+                    }
+                    counter_proposals.append(proposal)
+                    logger.info(f"✅ Fallback parsed: {proposal['name'][:50]}")
 
-        if current is None:
-            continue
+    logger.info(f"📊 TOTAL COUNTER-PROPOSALS PARSED: {len(counter_proposals)}")
 
-        # Detect Suggested Clause (START)
-        if suggested_start.match(txt):
-            collecting = "suggested_clause"
-            current["suggested_clause"] = ""
-            logger.info(f"  â†’ Line {idx}: Clause START marker")
-            continue
-
-        # Detect Suggested Clause (END)
-        if suggested_end.match(txt):
-            collecting = None
-            if current["suggested_clause"]:
-                current["suggested_clause"] = current["suggested_clause"].strip()
-                logger.info(f"  â†’ Line {idx}: Clause END marker ({len(current['suggested_clause'])} chars)")
-            continue
-
-        # One-line clause format
-        ol = one_line_clause.match(txt)
-        if ol:
-            current["suggested_clause"] = ol.group(2).strip()
-            collecting = None
-            logger.info(f"  â†’ Line {idx}: One-line clause captured")
-            continue
-
-        # Collect multi-line clause text
-        if collecting == "suggested_clause":
-            if txt == "":
-                current["suggested_clause"] += "\n\n"
-            else:
-                if current["suggested_clause"]:
-                    current["suggested_clause"] += "\n" + txt
-                else:
-                    current["suggested_clause"] = txt
-            continue
-
-        # Parse other fields
-        ci = current_issue_re.match(txt)
-        if ci:
-            current["current_issue"] = ci.group(1).strip()
-            logger.info(f"  â†’ Line {idx}: Current Issue captured")
-            continue
-
-        b = benefit_re.match(txt)
-        if b:
-            current["benefit"] = b.group(1).strip()
-            logger.info(f"  â†’ Line {idx}: Benefit captured")
-            continue
-
-        p = priority_re.match(txt)
-        if p:
-            current["priority"] = p.group(1).upper()
-            logger.info(f"  â†’ Line {idx}: Priority = {current['priority']}")
-            continue
-
-    logger.info(f"âœ… COUNTER-PROPOSALS PARSED: {len(counter_proposals)} total")
-
-    # Validation and error handling
+    # Final validation and error handling
     if len(counter_proposals) == 0:
-        logger.error("âŒ CRITICAL: No counter-proposals generated!")
+        logger.error("❌ CRITICAL: No counter-proposals could be parsed!")
         
-        # Check if output contained proposals but parsing failed
+        # Check if section exists at all
         proposals_section_exists = any("COUNTER" in line and "PROPOSAL" in line for line in lines)
         
         if proposals_section_exists:
-            logger.error("âš ï¸ Proposals section exists but parsing FAILED - check format")
+            # Section exists but parsing failed - provide helpful error
+            counter_proposals = [{
+                "name": "Counter-Proposals Parsing Error",
+                "priority": "HIGH",
+                "current_issue": "Counter-proposals were generated but could not be parsed. The LLM output format may not match expected structure. Check analysis_debug.log for raw output.",
+                "suggested_clause": "Review the complete analysis report section 'RECOMMENDED COUNTER-PROPOSALS' for the generated recommendations. Consider regenerating the analysis or contact support.",
+                "benefit": "Ensures all identified risks have corresponding mitigation strategies."
+            }]
         else:
-            logger.error("âš ï¸ LLM did not generate counter-proposals section at all")
-        
-        # Add fallback error proposal
-        counter_proposals = [{
-            "name": "Counter-Proposals Generation Failed",
-            "priority": "HIGH",
-            "current_issue": (
-                "The AI system did not generate counter-proposals. This may be due to: "
-                "(1) Token limit reached, (2) Complex document analysis, or (3) Parsing error. "
-                "Check debug_llm_output.txt for the raw output."
-            ),
-            "suggested_clause": (
-                "Please try again with a shorter document or contact support. "
-                "Review the analysis_debug.log file for detailed error information."
-            ),
-            "benefit": "N/A - Error condition"
-        }]
+            # No section generated at all - token limit issue
+            counter_proposals = [{
+                "name": "Counter-Proposals Generation Failed",
+                "priority": "HIGH",
+                "current_issue": "The AI system did not generate counter-proposals. This may be due to: (1) Token limit reached during analysis, (2) Document too complex, or (3) LLM timeout. Check debug_llm_output.txt for details.",
+                "suggested_clause": "Please try with a shorter document (under 5 pages recommended) or split analysis into multiple sessions. Contact support if issue persists.",
+                "benefit": "N/A - Error condition requires resolution"
+            }]
     else:
-        # Validate each proposal has required fields
-        valid_proposals = []
-        for cp in counter_proposals:
-            if not cp.get("suggested_clause"):
-                logger.warning(f"âš ï¸ WARNING: '{cp['name']}' missing clause text!")
-                cp["suggested_clause"] = "[Clause text not generated - please regenerate report]"
-            valid_proposals.append(cp)
-        
-        counter_proposals = valid_proposals
-        logger.info(f"ðŸ“Š Valid proposals: {len(counter_proposals)}")
+        # Validate all proposals have required fields
+        for idx, cp in enumerate(counter_proposals):
+            if not cp.get('suggested_clause') or cp['suggested_clause'] == "Clause not specified":
+                logger.warning(f"⚠️ Proposal '{cp['name']}' missing clause text - adding placeholder")
+                cp['suggested_clause'] = f"[Detailed clause language to be provided - addresses: {cp.get('current_issue', 'issue not specified')}]"
+            
+            if not cp.get('current_issue'):
+                cp['current_issue'] = "Issue requires further analysis"
+            
+            if not cp.get('benefit'):
+                cp['benefit'] = "Mitigates identified compliance or legal risk"
 
     
     
@@ -1856,19 +1887,20 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # ============================
     return {
         "metadata": {
-            "document_path": document_path,
-            "analysis_date": datetime.now().isoformat(),
-            "criteria": criteria,
-            "analysis_version": "3.0-hidden-risk-detection"
-        },
+        "document_path": document_path,
+        "analysis_date": datetime.now().isoformat(),
+        "criteria": criteria,  # ← This should contain the EDITED criteria
+        "total_criteria_count": len(criteria),  # ← ADD THIS
+        "analysis_version": "3.0-hidden-risk-detection"
+    },
         "summary": summary,
-        "hidden_risks_detected": hidden_risks,  # â† Contains all detected risks
+        "hidden_risks_detected": hidden_risks,  # ← This now works!
         "detection_methodology": {
             "regex_matches": regex_flags['total_flags'] if regex_flags else 0,
             "llm_confirmed": len(hidden_risks),
-             "false_positives_filtered": max(0, 
-        (regex_flags['total_flags'] - len(hidden_risks)) if regex_flags else 0
-    ),
+            "false_positives_filtered": max(0, 
+                (regex_flags['total_flags'] - len(hidden_risks)) if regex_flags else 0
+            ),
             "definition_traps_found": len(
                 [r for r in hidden_risks if 'definition' in r.get('name', '').lower()]
             ),
@@ -1887,10 +1919,65 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     }
 
 
+def validate_and_fix_risk_level(json_data: dict) -> dict:
+    """
+    Ensures risk_level matches risk_percentage using strict thresholds.
+    Fixes any LLM hallucinations or override errors.
+    """
+    risk_assessment = json_data.get('risk_assessment', {})
+    
+    # Extract percentage (try multiple field names)
+    risk_percentage = (
+        risk_assessment.get('risk_percentage') or 
+        risk_assessment.get('risk_score') or 
+        0
+    )
+    
+    # Convert to int
+    try:
+        risk_percentage = int(float(risk_percentage))
+    except (ValueError, TypeError):
+        logger.warning(f"Invalid risk percentage: {risk_percentage}, defaulting to 50")
+        risk_percentage = 50
+    
+    # Calculate correct risk level using strict thresholds
+    if risk_percentage <= 33:
+        correct_risk_level = "LOW RISK"
+    elif risk_percentage <= 66:
+        correct_risk_level = "MODERATE RISK"
+    else:
+        correct_risk_level = "HIGH RISK"
+    
+    # Get current risk level
+    current_risk_level = risk_assessment.get('risk_level', '')
+    
+    # Fix if mismatch
+    if current_risk_level != correct_risk_level:
+        logger.warning(
+            f"Risk level mismatch detected! "
+            f"Percentage: {risk_percentage}% → Should be {correct_risk_level}, "
+            f"but LLM returned {current_risk_level}. Correcting..."
+        )
+        risk_assessment['risk_level'] = correct_risk_level
+        risk_assessment['_corrected'] = True
+        risk_assessment['_original_level'] = current_risk_level
+    
+    # Ensure both fields exist
+    risk_assessment['risk_percentage'] = risk_percentage
+    risk_assessment['risk_level'] = correct_risk_level
+    
+    json_data['risk_assessment'] = risk_assessment
+    
+    logger.info(
+        f"✅ Risk validation complete: {risk_percentage}% = {correct_risk_level}"
+    )
+    
+    return json_data
+
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index1.html')
 
 
 
@@ -1898,7 +1985,9 @@ def index():
 @app.route('/analyze', methods=['POST'])
 def analyze():
     try:
-        # Check if file was uploaded
+        # =====================================================
+        # 1. FILE VALIDATION
+        # =====================================================
         if 'document' not in request.files:
             return jsonify({'error': 'No file uploaded'}), 400
         
@@ -1913,25 +2002,59 @@ def analyze():
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
+
+        # =====================================================
+        # 2. UNIVERSAL + CUSTOM CRITERIA HANDLING (UPDATED & DEDUPED)
+        # =====================================================
+
+        # Get edited default criteria from frontend
+        edited_default_criteria = request.form.get('default_criteria', '').strip()
         
-        # Handle criteria properly
+        if edited_default_criteria:
+            universal_criteria = [
+                c.strip() for c in edited_default_criteria.split('\n') if c.strip()
+            ]
+            logger.info(f"Using {len(universal_criteria)} EDITED universal criteria from user")
+        else:
+            universal_criteria = load_universal_criteria()
+            logger.info(f"Using {len(universal_criteria)} DEFAULT universal criteria from JSON")
+
+        # Additional Custom Criteria
         custom_criteria_text = request.form.get('criteria', '').strip()
-        
-        # Load universal criteria as default
-        universal_criteria = load_universal_criteria()
-        
+
         if custom_criteria_text:
-            custom_criteria = [c.strip() for c in custom_criteria_text.split('\n') if c.strip()]
+            custom_criteria = [
+                c.strip() for c in custom_criteria_text.split('\n') if c.strip()
+            ]
+
             all_criteria = universal_criteria.copy()
+
+            # Remove duplicates safely (case-insensitive)
             for custom in custom_criteria:
-                if custom not in all_criteria:
+                custom_norm = custom.lower().strip()
+
+                is_duplicate = any(
+                    str(u).lower().strip() == custom_norm
+                    for u in universal_criteria
+                )
+
+                if not is_duplicate:
                     all_criteria.append(custom)
-            logger.info(f"Using {len(universal_criteria)} universal + {len(custom_criteria)} custom = {len(all_criteria)} total criteria")
+                    logger.info(f"Added custom criteria: {custom[:50]}")
+                else:
+                    logger.info(f"Skipped duplicate custom: {custom[:50]}")
+
+            logger.info(
+                f"Total: {len(universal_criteria)} universal + "
+                f"{len(custom_criteria)} custom (deduped) = {len(all_criteria)}"
+            )
         else:
             all_criteria = universal_criteria
-            logger.info(f"Using {len(all_criteria)} universal criteria (no custom criteria provided)")
-        
-        # Normalize criteria to strings
+            logger.info(f"Using ONLY {len(all_criteria)} universal criteria (no custom)")
+
+        # =====================================================
+        # 3. NORMALIZE CRITERIA
+        # =====================================================
         normalized_criteria = []
         for item in all_criteria:
             if isinstance(item, dict):
@@ -1941,24 +2064,24 @@ def analyze():
                 normalized_criteria.append(f"[{priority}] {category}: {description}")
             else:
                 normalized_criteria.append(str(item))
-        
+
         if not normalized_criteria:
             return jsonify({'error': 'No criteria available for analysis'}), 400
-        
-        # Analyze document
-        # IMPORTANT: analyze_document must return both result JSON and final_output text
-        # Adjust analyze_document accordingly:
-        #   result, final_output = analyze_document(filepath, normalized_criteria)
+
+        # =====================================================
+        # 4. ANALYZE DOCUMENT (LLM)
+        # =====================================================
         result = analyze_document(filepath, normalized_criteria)
+
         final_output = (
-    result.get('_raw_output')
-    or result.get('_raw_report')
-    or result.get('_raw')
-    or result.get('analysis_text')
-    or ''
-)
+            result.get('_raw_output')
+            or result.get('_raw_report')
+            or result.get('_raw')
+            or result.get('analysis_text')
+            or ''
+        )
+
         if not final_output:
-            # Helpful debug log so you can see what's inside result when something goes wrong
             logger.error("DEBUG: result keys: " + ", ".join(list(result.keys())))
 
             if isinstance(result.get('summary'), str):
@@ -1969,8 +2092,10 @@ def analyze():
                 )
             elif 'saved_file_path' in result:
                 final_output = (
-                    f"[Raw output missing â€” saved JSON at {result.get('saved_file_path')}]"
+                    f"[Raw output missing — saved JSON at {result.get('saved_file_path')}]"
                 )
+
+        # Save FULL raw LLM output
         try:
             with open('debug_llm_output.txt', 'w', encoding='utf-8') as f:
                 f.write(final_output)
@@ -1978,64 +2103,58 @@ def analyze():
         except Exception as e:
             logger.error(f"Could not save debug_llm_output.txt: {e}")
 
-        # Check if counter-proposals section exists
+        # =====================================================
+        # 5. COUNTER-PROPOSALS VALIDATION
+        # =====================================================
         if "COUNTER" in final_output.upper() and "PROPOSAL" in final_output.upper():
-            logger.info("âœ“ Counter-proposals section found in output")
-
+            logger.info("✓ Counter-proposals section found")
             start_idx = final_output.upper().find("COUNTER")
             sample = final_output[start_idx:start_idx + 1000]
-            logger.info(f"Sample of counter-proposals section:\n{sample}")
+            logger.info(f"Sample:\n{sample}")
         else:
-            logger.error("âœ— No counter-proposals section found in LLM output!")
-                
-        # ============================================
-        # VALIDATE COUNTER-PROPOSALS BEFORE SENDING
-        # ============================================
-        counter_proposals = result.get('counter_proposals', [])
+            logger.error("✗ No counter-proposals section found in LLM output!")
 
-        logger.info(f"Validation Check: {len(counter_proposals)} counter-proposals found")
+        counter_proposals = result.get('counter_proposals', [])
+        logger.info(f"Validation: {len(counter_proposals)} counter-proposals found")
 
         if len(counter_proposals) == 0:
             logger.error("CRITICAL: No counter-proposals generated!")
 
-            # Check if raw output contained proposals
             if isinstance(final_output, str) and "COUNTER-PROPOSALS" in final_output.upper():
-                logger.error("Proposals exist in output but parsing FAILED")
+                logger.error("Proposals exist — parsing FAILED")
                 start_idx = final_output.upper().find("COUNTER-PROPOSALS")
                 sample = (
                     final_output[start_idx:start_idx + 500]
                     if start_idx != -1 else final_output[:500]
                 )
-                logger.error(f"Output sample around COUNTER-PROPOSALS:\n{sample}")
+                logger.error(f"Sample around counter-proposals:\n{sample}")
             else:
-                logger.error("LLM did not generate counter-proposals section at all")
+                logger.error("LLM did NOT generate any counter-proposals section")
 
-            # Inject fallback error proposal
             result['counter_proposals'] = [{
                 "name": "Counter-Proposals Generation Failed",
                 "priority": "HIGH",
                 "current_issue": (
-                    "The AI system did not generate counter-proposals. This may be due to: "
-                    "(1) Token limit reached, (2) Complex document analysis, or (3) Parsing error."
+                    "The AI system did not generate counter-proposals. "
+                    "Possible causes: Token limit, complex document, or parsing error."
                 ),
                 "suggested_clause": (
                     "Please try again with a shorter document, or contact support. "
-                    "Check the analysis_debug.log file for detailed error information."
+                    "Refer to analysis_debug.log for details."
                 ),
                 "benefit": "N/A - Error condition"
             }]
 
         else:
-            # Validate each proposal
-            valid_count = 0
             valid_proposals = []
+            valid_count = 0
 
             for idx, cp in enumerate(counter_proposals, 1):
                 clause = cp.get("suggested_clause", "")
 
                 if clause and clause != "[Clause not generated - regenerate report]":
-                    valid_count += 1
                     valid_proposals.append(cp)
+                    valid_count += 1
                     logger.info(
                         f"Proposal #{idx}: {cp.get('name', 'Unknown')[:50]} | {len(clause)} chars"
                     )
@@ -2045,30 +2164,26 @@ def analyze():
                     )
 
             logger.info(
-                f"FINAL: {valid_count}/{len(counter_proposals)} proposals have valid clause text"
+                f"FINAL VALID PROPOSALS: {valid_count}/{len(counter_proposals)}"
             )
 
-            # Keep only valid ones if any exist
             if valid_proposals:
                 result['counter_proposals'] = valid_proposals
 
-        # -------------------------------
-        # 4. Save JSON to file
-        # -------------------------------
+        # =====================================================
+        # 6. SAVE JSON REPORT
+        # =====================================================
         try:
             json_file_path = save_json_report(result, filepath)
             result['saved_file_path'] = json_file_path
-            logger.info(f"Analysis complete. JSON saved to: {json_file_path}")
-
+            logger.info(f"Analysis complete. JSON saved at: {json_file_path}")
         except Exception as e:
             logger.warning(f"Could not save JSON file: {e}")
 
-        # -------------------------------
-        # 5. Final response
-        # -------------------------------
-        logger.info(
-            f"Sending response with {len(result.get('counter_proposals', []))} counter-proposals"
-        )
+        # =====================================================
+        # 7. FINAL RESPONSE
+        # =====================================================
+        logger.info(f"Sending response with {len(result.get('counter_proposals', []))} counter-proposals")
         return jsonify(result)
 
     except Exception as e:
@@ -2108,6 +2223,6 @@ def debug_last_analysis():
 
     
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, host='127.0.0.1', port=5000)
 
 

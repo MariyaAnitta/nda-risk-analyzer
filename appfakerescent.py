@@ -1,4 +1,3 @@
-#no counter prop
 import os
 import sys
 import json
@@ -928,65 +927,7 @@ CRITICAL RULES:
         report_task
     ]
 
-def parse_proposals_from_text(raw_text: str) -> List[Dict]:
-    """
-    Parses proposals from the mitigation advisor's raw text output using the
-    ---PROPOSAL START/END--- markers.
-    """
-    proposals = []
-    
-    # Define a robust default clause text for Data Protection as a fallback
-    DEFAULT_DP_CLAUSE = (
-        "The Receiving Party shall process all Confidential Information (including any Personal Data) "
-        "in strict compliance with all applicable data protection laws, including the **Digital "
-        "Personal Data Protection Act, 2023** of India, if applicable. "
-        "The Receiving Party warrants that it has implemented appropriate technical and organizational "
-        "measures to ensure a level of security appropriate to the risk, including protection against "
-        "unauthorized or unlawful processing and against accidental loss, destruction, or damage."
-    )
-    
-    # 1. Regex to find all blocks between the start/end markers
-    proposal_blocks = re.findall(r'---PROPOSAL START---\n(.*?)\n---PROPOSAL END---', raw_text, re.DOTALL)
 
-    for block in proposal_blocks:
-        proposal = {}
-        
-        # 2. Extract fields using dedicated regex. re.DOTALL is crucial for multi-line text
-        name_match = re.search(r'Name:\s*(.*?)\n', block, re.IGNORECASE)
-        priority_match = re.search(r'Priority:\s*(.*?)\n', block, re.IGNORECASE)
-        issue_match = re.search(r'Issue:\s*(.*?)\n', block, re.IGNORECASE)
-        
-        # CRITICAL: Clause extraction finds the text between "Clause:" and the next expected field ("Benefit:")
-        clause_match = re.search(r'Clause:\s*(.*?)\nBenefit:', block, re.IGNORECASE | re.DOTALL)
-        
-        benefit_match = re.search(r'Benefit:\s*(.*)', block, re.IGNORECASE | re.DOTALL)
-
-        if name_match: proposal['title'] = name_match.group(1).strip()
-        if priority_match: proposal['priority'] = priority_match.group(1).strip()
-        if issue_match: proposal['issue'] = issue_match.group(1).strip()
-        if benefit_match: proposal['benefit'] = benefit_match.group(1).strip()
-
-        # 3. Handle Clause Text Extraction
-        clause_text = ""
-        if clause_match:
-            # Group 1 captures the text between the labels
-            clause_text = clause_match.group(1).strip()
-        
-        # 4. Apply safety check for empty/failed generation
-        if not clause_text or len(clause_text) < 50: 
-            # If the clause failed to generate, or is too short, use a placeholder or the default DP clause
-            if proposal.get('title') and 'Data Protection' in proposal['title']:
-                proposal['suggested_fix'] = DEFAULT_DP_CLAUSE
-                logger.warning(f"Replaced failed suggested_fix for Data Protection with default clause.")
-            else:
-                proposal['suggested_fix'] = '[Clause text not generated - please regenerate report]'
-        else:
-            proposal['suggested_fix'] = clause_text
-
-        if proposal.get('title'):
-            proposals.append(proposal)
-
-    return proposals
 
 def analyze_document(file_path: str, criteria: list) -> dict:
     """Main analysis function that returns structured JSON."""
@@ -1094,12 +1035,6 @@ def analyze_document(file_path: str, criteria: list) -> dict:
     final_output = getattr(result, 'output', str(result))
     logger.info(f" LLM OUTPUT LENGTH: {len(final_output)} characters")
     logger.info(f" OUTPUT PREVIEW (last 500 chars):\n{final_output[-500:]}")
-    try:
-        structured_proposals = parse_proposals_from_text(final_output)
-        logger.info(f"✓ Extracted {len(structured_proposals)} proposals from mitigation advisor output")
-    except Exception as e:
-        logger.error(f"parse_proposals_from_text failed: {e}")
-        structured_proposals = []
 
 # Check if output was truncated
     if "COUNTER-PROPOSALS" in final_output.upper() and "Modification" not in final_output:
@@ -1124,14 +1059,6 @@ def analyze_document(file_path: str, criteria: list) -> dict:
         definition_analysis,   # NEW
         cross_ref_map          # NEW
     )
-    try:
-        if structured_proposals:
-            json_data['counter_proposals'] = structured_proposals
-            logger.info(f"Injected {len(structured_proposals)} structured proposals into final JSON")
-        else:
-            logger.warning("No structured proposals found — keeping parsed_report_to_json output")
-    except Exception as e:
-        logger.error(f"Failed to inject structured proposals: {e}")
 
     # ==========================================
     # 🔍 STEP 4 — Validate JSON
