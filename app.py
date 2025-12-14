@@ -1285,29 +1285,6 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     import re
     from datetime import datetime
 
-    # NOTE: The logger and clean_markdown_artifacts are assumed to be defined elsewhere in the execution environment.
-    # We must keep them in the code as requested.
-    def clean_markdown_artifacts(text):
-        # Placeholder implementation for clean_markdown_artifacts
-        return text.replace("**", "").replace("*", "").strip()
-
-    class Logger:
-        def info(self, msg):
-            # print(f"INFO: {msg}")
-            pass
-        def warning(self, msg):
-            # print(f"WARNING: {msg}")
-            pass
-        def debug(self, msg):
-            # print(f"DEBUG: {msg}")
-            pass
-        def error(self, msg):
-            # print(f"ERROR: {msg}")
-            pass
-    
-    logger = Logger()
-    # End of placeholders
-
     text_report = text_report.replace("```", "")
     lines = text_report.split("\n")
 
@@ -1317,19 +1294,18 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     summary = ""
     for i, line in enumerate(lines):
         if line.strip() and not line.startswith("LEGAL DOCUMENT") and not line.startswith("==="):
-            if "VENDOR" in line or "JURISDICTION" in line or "PROTECTIONS FOUND" in line:
+            if "VENDOR" in line or "JURISDICTION" in line or "PROTECTIONS FOUND" in line or "HIDDEN" in line:
                 break
             summary = line.strip()
-    summary = clean_markdown_artifacts(summary)
 
     hidden_risks = []
     in_hidden_section = False
+    in_detection_summary = False  # NEW FLAG
     current_trap = None
     trap_number = 0
 
-    # Updated end markers to be more precise
+    # Section enders (only check these AFTER detection summary)
     END_MARKERS = [
-        "DETECTION SUMMARY:",
         "VENDOR & JURISDICTION",
         "INDIAN CONTRACT ACT",
         "10XDS COMPANY",
@@ -1341,23 +1317,27 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     logger.info("🔍 Starting hidden risks extraction...")
 
     for i, raw_line in enumerate(lines):
-        stripped = raw_line.strip()
+        stripped = raw_line.strip()  # Remove ALL leading/trailing whitespace
         if not stripped:
             continue
         upper = stripped.upper()
 
         # ===== START HIDDEN SECTION =====
         if not in_hidden_section:
-            if "HIDDEN" in upper and ("RISK" in upper or "TRAP" in upper):
+            # Match "HIDDEN" + "RISK" OR "TRAP" (case-insensitive, ignores leading spaces)
+            if ("HIDDEN" in upper and ("RISK" in upper or "TRAP" in upper)):
                 in_hidden_section = True
-                logger.info(f"  ✅ Line {i}: Hidden Risks section started")
+                logger.info(f"  ✅ Line {i}: Hidden Risks section started: {stripped[:60]}")
                 
                 # Check if trap starts on same line as header
-                trap_match = re.search(r'HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
+                trap_match = re.search(
+                    r'(?:🎭\s*)?HIDDEN\s+TRAP[:\s#]*(\d+)[:\s]*(.+)', 
+                    stripped, 
+                    re.IGNORECASE
+                )
                 if trap_match:
                     trap_number = int(trap_match.group(1))
                     trap_name = trap_match.group(2).strip()
-                    # Remove "Name:" prefix if present
                     trap_name = re.sub(r'^Name:\s*', '', trap_name, flags=re.IGNORECASE)
                     current_trap = {
                         'name': trap_name,
@@ -1369,21 +1349,40 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     logger.info(f"    🎭 Found trap on header line: {trap_name}")
                 continue
 
-        # ===== END HIDDEN SECTION =====
-        if in_hidden_section:
-            # Check if we've reached the end
+        # ===== HANDLE DETECTION SUMMARY (don't exit section!) =====
+        if in_hidden_section and "DETECTION SUMMARY" in upper:
+            in_detection_summary = True
+            logger.info(f"  📊 Line {i}: Entered Detection Summary (staying in hidden section)")
+            continue
+        
+        # Exit detection summary when we see a trap or end marker
+        if in_detection_summary:
+            if "HIDDEN TRAP" in upper or any(marker in upper for marker in END_MARKERS):
+                in_detection_summary = False
+                logger.info(f"  📊 Line {i}: Exited Detection Summary")
+            else:
+                # Skip lines inside detection summary
+                continue
+
+        # ===== END HIDDEN SECTION (only check if NOT in detection summary) =====
+        if in_hidden_section and not in_detection_summary:
             if any(marker in upper for marker in END_MARKERS):
                 if current_trap and current_trap.get('name'):
                     hidden_risks.append(current_trap)
                     logger.info(f"  ✅ Saved final trap: {current_trap['name']}")
-                logger.info(f"  🛑 Line {i}: Hidden Risks section ended")
+                logger.info(f"  🛑 Line {i}: Hidden Risks section ended at: {stripped[:60]}")
                 break
 
-        # ===== PARSE TRAP CONTENT =====
-        if in_hidden_section:
+        # ===== PARSE TRAP CONTENT (skip if in detection summary) =====
+        if in_hidden_section and not in_detection_summary:
             
-            # Check for new trap starting (either with ** or without)
-            trap_match = re.search(r'\*?\*?HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
+            # Check for new trap starting (flexible pattern)
+            trap_match = re.search(
+                r'(?:🎭\s*)?\*?\*?\s*HIDDEN\s+TRAP[:\s#]*(\d+)[:\s]*(.+)',
+                stripped,
+                re.IGNORECASE
+            )
+            
             if trap_match:
                 # Save previous trap
                 if current_trap and current_trap.get('name'):
@@ -1392,8 +1391,8 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                 
                 trap_number = int(trap_match.group(1))
                 trap_name = trap_match.group(2).strip()
-                # Remove "Name:" prefix if present
                 trap_name = re.sub(r'^Name:\s*', '', trap_name, flags=re.IGNORECASE)
+                trap_name = re.sub(r'^\*+\s*', '', trap_name)
                 
                 current_trap = {
                     'name': trap_name,
@@ -1405,7 +1404,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                 logger.info(f"    🎭 New trap #{trap_number}: {trap_name}")
                 continue
 
-            # Parse trap fields
+            # Parse trap fields (only if we have a current trap)
             if current_trap:
                 
                 # Name field (if separate line)
@@ -1416,12 +1415,12 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                         logger.info(f"      📝 Name: {name}")
                     continue
 
-                # Primary Clause
-                if stripped.startswith("Primary Clause:"):
-                    content = stripped.replace("Primary Clause:", "", 1).strip()
+                # Primary Clause (flexible matching)
+                if re.match(r'^Primary\s+Clause', stripped, re.IGNORECASE):
+                    content = re.sub(r'^Primary\s+Clause[:\s]*', '', stripped, flags=re.IGNORECASE).strip()
                     current_trap['primary_clause'] = content
                     
-                    # Extract clause number
+                    # Extract clause number if present
                     clause_match = re.search(r'Clause\s+(\d+[A-Za-z]?)', content, re.IGNORECASE)
                     if clause_match:
                         current_trap['clause_number'] = clause_match.group(1)
@@ -1430,8 +1429,8 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     continue
 
                 # Real Meaning / Real Impact
-                if re.match(r'^Real (Meaning|Impact)', stripped, re.IGNORECASE):
-                    content = re.sub(r'^Real (Meaning|Impact)[:\s]*', '', stripped, flags=re.IGNORECASE).strip()
+                if re.match(r'^Real\s+(Meaning|Impact)', stripped, re.IGNORECASE):
+                    content = re.sub(r'^Real\s+(Meaning|Impact)[:\s]*', '', stripped, flags=re.IGNORECASE).strip()
                     current_trap['real_meaning'] = content
                     logger.info(f"      💡 Real Meaning: {content[:50]}...")
                     continue
@@ -1439,7 +1438,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                 # Severity
                 if stripped.startswith("Severity:"):
                     severity_raw = stripped.replace("Severity:", "", 1).strip()
-                    # Remove any parenthetical notes
+                    # Remove any parenthetical notes like "(Business Impact)"
                     severity_clean = re.sub(r'\s*\(.*?\)\s*', '', severity_raw).strip()
                     current_trap['severity'] = severity_clean
                     logger.info(f"      ⚠️ Severity: {severity_clean}")
@@ -1459,11 +1458,11 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             seen_clauses.add(clause_key)
             deduplicated_risks.append(risk)
         else:
-            logger.info(f"  Duplicate removed: {risk.get('name', '<unnamed>')}")
+            logger.info(f"  🗑️ Duplicate removed: {risk.get('name', '<unnamed>')}")
 
     hidden_risks = deduplicated_risks
-    
-    logger.info(f" FINAL: Extracted {len(hidden_risks)} hidden risks")
+
+    logger.info(f"🎯 FINAL: Extracted {len(hidden_risks)} hidden risks")
     for idx, risk in enumerate(hidden_risks, 1):
         logger.info(f"  {idx}. {risk.get('name', 'Unknown')} - {risk.get('severity', 'N/A')}")
 
