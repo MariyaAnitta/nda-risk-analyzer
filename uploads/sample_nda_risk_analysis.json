@@ -1,7 +1,7 @@
 {
   "metadata": {
     "document_path": "uploads\\sample_nda.pdf",
-    "analysis_date": "2025-12-12T14:34:17.319881",
+    "analysis_date": "2025-12-14T18:00:23.076957",
     "criteria": [
       "Party identification and contact details",
       "Clear definition of confidential information",
@@ -10,10 +10,9 @@
       "Permitted disclosure exceptions (e.g. legal, regulatory)",
       "Return or destruction of confidential materials clause",
       "Term/duration of confidentiality obligation",
-      "Liability limitations and remedies for breach",
       "Governing law and jurisdiction clause"
     ],
-    "total_criteria_count": 9,
+    "total_criteria_count": 8,
     "analysis_version": "3.0-hidden-risk-detection"
   },
   "summary": "- Combined Risk Multipliers: None",
@@ -22,28 +21,28 @@
       "name": "Unlimited Liability",
       "primary_clause": "Clause 10",
       "clause_number": "10",
-      "real_meaning": "The Receiving Party may be liable for unlimited damages in case of breach.",
+      "real_meaning": "The Receiving Party may be held liable for unlimited amounts, potentially leading to significant financial losses.",
       "severity": "CRITICAL"
     },
     {
       "name": "Overly Broad Definition",
       "primary_clause": "Clause 1",
       "clause_number": "1",
-      "real_meaning": "The Receiving Party may be obligated to protect more information than necessary.",
+      "real_meaning": "The Receiving Party may be obligated to protect non-confidential information, leading to unnecessary restrictions.",
       "severity": "HIGH"
     },
     {
       "name": "Exclusive Jurisdiction",
       "primary_clause": "Clause 12",
       "clause_number": "12",
-      "real_meaning": "One party may be at a disadvantage in case of a dispute.",
+      "real_meaning": "The Parties may be required to litigate disputes in a foreign jurisdiction, potentially leading to increased costs and complexity.",
       "severity": "HIGH"
     },
     {
-      "name": "Reasonable Opportunity",
-      "primary_clause": "Clause 7",
-      "clause_number": "7",
-      "real_meaning": "The Receiving Party may be at risk of non-compliance with Indian laws.",
+      "name": "Post-Termination Obligations",
+      "primary_clause": "Clause 11",
+      "clause_number": "11",
+      "real_meaning": "The Receiving Party may be required to return or destroy Confidential Information, potentially leading to information security risks.",
       "severity": "MEDIUM"
     }
   ],
@@ -55,38 +54,49 @@
     "cross_reference_clusters": 0
   },
   "jurisdiction_intelligence": {
-    "vendor_name": "Not specified",
-    "vendor_location": "Not specified",
-    "vendor_classification": "Not specified",
+    "vendor_name": "[Unknown]",
+    "vendor_location": "[Unknown]",
+    "vendor_classification": "[Unknown]",
     "governing_law": "Laws of India",
-    "jurisdiction": "Exclusive jurisdiction of Indian courts",
+    "jurisdiction": "[__] India",
     "compliance_level_required": "STRICT"
   },
   "indian_law_compliance": {
     "compliant_items": [
       "Clause 1: Definition of Confidential Information",
-      "Clause 3: Use of Confidential Information exclusively for the Purpose",
-      "Clause 4: Disclosure of Confidential Information to employees on a need-to-know basis",
-      "Clause 5: Protection of Confidential Information by the Receiving Party",
-      "Clause 6: Exceptions to confidentiality obligations (public domain, prior possession, etc.)"
+      "Clause 2: Types of Confidential Information",
+      "Clause 3: Use of Confidential Information",
+      "Clause 4: Disclosure of Confidential Information to employees",
+      "Clause 5: Protection of Confidential Information",
+      "Clause 6: Exceptions to confidentiality obligations"
     ],
     "violations": [
-      "None"
+      "Unlimited liability (Clause 10)",
+      "Perpetual confidentiality without exceptions (Clause 1)",
+      "Automatic IP transfer (Clause 1)",
+      "One-sided termination restrictions (Clause 11)"
     ],
     "risks": [
-      "The agreement does not specify the duration of the NDA, which may lead to uncertainty and disputes."
+      "Information security risks due to post-termination obligations (Clause 11)",
+      "IP disputes due to lack of IP ownership clarity (Clause 1)"
     ]
   },
   "company_policy_compliance": {
     "blocking_violations": [
-      "None"
+      "Unlimited liability (Clause 10)",
+      "Perpetual confidentiality without exceptions (Clause 1)",
+      "Automatic IP transfer (Clause 1)",
+      "One-sided termination restrictions (Clause 11)"
     ],
     "missing_protections": [
-      "Data Protection Clause",
-      "IP Ownership Clarity Clause"
+      "Data protection clause",
+      "IP ownership clarity clause",
+      "Mutual termination clause",
+      "Return/destruction of information clause"
     ],
     "preference_gaps": [
-      "The agreement does not specify the jurisdiction and governing law clauses, which may not be favorable to one party."
+      "NDA duration clause",
+      "Confidentiality period post-termination clause"
     ]
   },
   "protections_found": [
@@ -109,92 +119,107 @@
       "name": "Protection 4 (detailed parsing failed - see report)",
       "clause": null,
       "evidence": null
-    },
-    {
-      "name": "Protection 5 (detailed parsing failed - see report)",
-      "clause": null,
-      "evidence": null
-    },
-    {
-      "name": "Protection 6 (detailed parsing failed - see report)",
-      "clause": null,
-      "evidence": null
-    },
-    {
-      "name": "Protection 7 (detailed parsing failed - see report)",
-      "clause": null,
-      "evidence": null
     }
   ],
   "protections_missing": [
     {
-      "name": "Data Protection Clause",
+      "name": "Data protection clause",
       "risk": null
     },
     {
-      "name": "IP Ownership Clarity Clause",
+      "name": "IP ownership clarity clause",
+      "risk": null
+    },
+    {
+      "name": "Mutual termination clause",
+      "risk": null
+    },
+    {
+      "name": "Return/destruction of information clause",
+      "risk": null
+    },
+    {
+      "name": "NDA duration clause",
+      "risk": null
+    },
+    {
+      "name": "Confidentiality period post-termination clause",
       "risk": null
     }
   ],
   "counter_proposals": [
     {
-      "name": "Liability Cap Clause",
+      "name": "Unlimited Liability Cap Clause",
       "priority": "BLOCKING",
-      "current_issue": "Unlimited liability exposure for the Receiving Party.",
-      "suggested_clause": "The Receiving Party's liability for damages under this Agreement shall be limited to an amount equal to the total fees paid by the Disclosing Party to the Receiving Party during the term of this Agreement. In no event shall the Receiving Party be liable for any consequential, indirect, special, or punitive damages. The parties agree that the limitations of liability set forth in this clause are reasonable and fair.",
-      "benefit": "Limits the Receiving Party's liability exposure and provides a fair and reasonable cap on damages."
+      "current_issue": "No explicit liability cap mentioned in the Agreement, exposing 10xds to unlimited liability.",
+      "suggested_clause": "In no event shall either Party be liable for any consequential, indirect, special, punitive, or incidental damages arising out of or related to this Agreement. The total liability of each Party under this Agreement shall not exceed the amount of [__] (the \"Liability Cap\").",
+      "benefit": "Limits liability exposure to a specified amount, reducing financial risk."
     },
     {
-      "name": "Data Protection Clause",
-      "priority": "HIGH",
-      "current_issue": "No explicit data protection clause exists, exposing the parties to data protection law violations.",
-      "suggested_clause": "Each party shall comply with all applicable data protection laws and regulations, including but not limited to the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023, in connection with any personal data processed under this Agreement. The Receiving Party shall implement and maintain appropriate technical and organizational measures to protect personal data against unauthorized or unlawful processing and against accidental loss, destruction, damage, alteration, or disclosure. Both parties agree to notify each other within 24 hours of any data breach or suspected breach.",
-      "benefit": "Ensures compliance with Indian data protection laws and limits liability exposure."
+      "name": "Perpetual Confidentiality Exception Clause",
+      "priority": "BLOCKING",
+      "current_issue": "Perpetual confidentiality without exceptions, potentially restricting 10xds' ability to disclose information.",
+      "suggested_clause": "The obligations of confidentiality under this Agreement shall not apply to any Confidential Information that is required to be disclosed by law, regulation, or court order, provided that the Receiving Party gives the Disclosing Party prompt written notice of such requirement.",
+      "benefit": "Provides exceptions to perpetual confidentiality, allowing for necessary disclosures."
     },
     {
       "name": "IP Ownership Clarity Clause",
       "priority": "HIGH",
-      "current_issue": "No clear statement on IP ownership exists, potentially leading to disputes.",
-      "suggested_clause": "The parties agree that all intellectual property rights, including but not limited to patents, trademarks, copyrights, and trade secrets, shall remain the exclusive property of the respective party. Neither party shall acquire any rights, title, or interest in the other party's intellectual property.",
-      "benefit": "Clarifies IP ownership and avoids potential disputes."
+      "current_issue": "No explicit IP ownership clause mentioned in the Agreement, potentially leading to IP disputes.",
+      "suggested_clause": "All intellectual property rights, including but not limited to patents, trademarks, copyrights, and trade secrets, shall remain the exclusive property of the respective Party. Neither Party shall acquire any right, title, or interest in the other Party's intellectual property.",
+      "benefit": "Clarifies IP ownership, reducing the risk of IP disputes."
     },
     {
-      "name": "Return/Destruction of Confidential Information Clause",
-      "priority": "MEDIUM",
-      "current_issue": "No clause exists for return or destruction of confidential information upon termination.",
-      "suggested_clause": "Upon termination of this Agreement, the Receiving Party shall return to the Disclosing Party all confidential information, including but not limited to documents, materials, and electronic data, within a period of 30 days. The Receiving Party shall also destroy all copies of confidential information in its possession, including but not limited to electronic data, and provide a certificate of destruction to the Disclosing Party.",
-      "benefit": "Ensures the return or destruction of confidential information upon termination and limits the risk of unauthorized disclosure."
+      "name": "Mutual Termination Clause",
+      "priority": "HIGH",
+      "current_issue": "One-sided termination restrictions, potentially restricting 10xds' ability to terminate the Agreement.",
+      "suggested_clause": "Either Party may terminate this Agreement upon [__] days' written notice to the other Party. Upon termination, all obligations of confidentiality and non-disclosure shall continue in effect.",
+      "benefit": "Provides mutual termination rights, allowing for more flexibility."
     },
     {
-      "name": "NDA Duration and Confidentiality Period Clause",
+      "name": "Data Protection Clause",
+      "priority": "HIGH",
+      "current_issue": "No explicit data protection terms mentioned in the Agreement, potentially exposing 10xds to data protection risks.",
+      "suggested_clause": "Each Party shall comply with all applicable data protection laws and regulations, including but not limited to the Information Technology Act, 2000, and the Digital Personal Data Protection Act, 2023. The Receiving Party shall implement and maintain appropriate technical and organizational measures to protect personal data against unauthorized access, loss, or disclosure.",
+      "benefit": "Ensures compliance with Indian data protection laws, reducing data protection risks."
+    },
+    {
+      "name": "Return/Destruction of Information Clause",
       "priority": "MEDIUM",
-      "current_issue": "No specific duration is mentioned for the NDA, and the confidentiality period post-termination is not specified.",
-      "suggested_clause": "The obligations of the Receiving Party under this Agreement shall remain in effect for a period of 5 years from the date of termination. The confidentiality period shall commence on the effective date of this Agreement and shall continue for a period of 5 years from the date of termination.",
-      "benefit": "Specifies the NDA duration and confidentiality period post-termination, providing clarity and certainty."
+      "current_issue": "No explicit post-termination obligations mentioned in the Agreement, potentially leading to information security risks.",
+      "suggested_clause": "Upon termination or expiration of this Agreement, the Receiving Party shall return to the Disclosing Party all Confidential Information, including but not limited to documents, materials, and electronic data. The Receiving Party shall also destroy all copies of Confidential Information, except as required by law or regulation.",
+      "benefit": "Ensures the secure return and destruction of Confidential Information, reducing information security risks."
     },
     {
       "name": "Jurisdiction and Governing Law Clause",
       "priority": "MEDIUM",
-      "current_issue": "The jurisdiction and governing law clauses may not be favorable to one party.",
-      "suggested_clause": "This Agreement shall be governed and construed in accordance with the laws of India. The parties agree to submit to the exclusive jurisdiction of the courts of [insert location], India.",
-      "benefit": "Confirms the jurisdiction and governing law clauses, ensuring compliance with 10xds requirements."
+      "current_issue": "The specific location of the jurisdiction is not specified, potentially creating enforcement challenges.",
+      "suggested_clause": "This Agreement shall be governed and construed in accordance with the laws of India. The competent courts at [__] India shall have the sole and exclusive jurisdiction over any dispute that arises in relation to this Agreement.",
+      "benefit": "Specifies the jurisdiction and governing law, reducing enforcement challenges."
     },
     {
-      "name": "Vendor Identity and Location Verification Clause",
-      "priority": "MEDIUM",
-      "current_issue": "The vendor's identity and location are not specified, potentially creating enforcement challenges.",
-      "suggested_clause": "The vendor shall provide the Disclosing Party with its identity and location, including but not limited to its name, address, and contact information. The vendor shall also provide the Disclosing Party with any changes to its identity and location within a period of 30 days.",
-      "benefit": "Verifies the vendor's identity and location, ensuring enforceability and compliance with 10xds requirements."
+      "name": "NDA Duration Clause",
+      "priority": "LOW",
+      "current_issue": "No explicit duration mentioned in the Agreement, potentially leading to uncertainty.",
+      "suggested_clause": "The obligations of confidentiality under this Agreement shall remain in effect for a period of [__] years from the date of termination.",
+      "benefit": "Provides clarity on the duration of confidentiality obligations, reducing uncertainty."
+    },
+    {
+      "name": "Confidentiality Period Post-Termination Clause",
+      "priority": "LOW",
+      "current_issue": "No explicit post-termination confidentiality period mentioned in the Agreement, potentially leading to uncertainty.",
+      "suggested_clause": "The obligations of confidentiality under this Agreement shall continue in effect for a period of [__] years after termination or expiration of this Agreement.",
+      "benefit": "Provides clarity on the post-termination confidentiality period, reducing uncertainty."
     }
   ],
   "risk_assessment": {
-    "risk_percentage": 44,
-    "risk_level": "MODERATE RISK"
+    "risk_percentage": 142,
+    "risk_level": "HIGH RISK"
   },
-  "recommendation": "NEGOTIATE FIRST The agreement has several critical concerns, including unlimited liability exposure, overly broad definition of Confidential Information, and exclusive jurisdiction of Indian courts. It is recommended to negotiate the inclusion of a liability cap clause, a data protection clause, and an IP ownership clarity clause to mitigate these risks.",
+  "recommendation": "DO NOT SIGN AS-IS. Negotiate the preferred terms to ensure they align with 10xds' requirements.",
   "validation": {
-    "is_valid": true,
-    "message": "✓ JSON data is valid according to schema"
+    "is_valid": false,
+    "message": "✗ Validation Error: 142 is greater than the maximum of 100"
   },
-  "_raw_output": "=== LEGAL DOCUMENT RISK ASSESSMENT REPORT ===\n\nEXECUTIVE SUMMARY:\nThe overall risk level of this agreement is MODERATE RISK, with a risk percentage of 44.44%. The main concerns are the unlimited liability exposure for the Receiving Party, the overly broad definition of Confidential Information, and the exclusive jurisdiction of Indian courts. It is recommended to negotiate the inclusion of a liability cap clause, a data protection clause, and an IP ownership clarity clause to mitigate these risks.\n\n HIDDEN & DISGUISED RISKS:\nHIDDEN TRAP #1: Unlimited Liability\nPrimary Clause: Clause 10\nHidden Mechanism: Without limitation\nHow It Works: The Receiving Party's liability for damages is not capped.\nReal Meaning: The Receiving Party may be liable for unlimited damages in case of breach.\nSeverity: CRITICAL\nDetection Method: Regex\nConfidence: 0.9\n\nHIDDEN TRAP #2: Overly Broad Definition\nPrimary Clause: Clause 1\nHidden Mechanism: Includes all non-public information\nHow It Works: The definition of Confidential Information is too broad, potentially capturing unnecessary information.\nReal Meaning: The Receiving Party may be obligated to protect more information than necessary.\nSeverity: HIGH\nDetection Method: Definition Analysis\nConfidence: 0.8\n\nHIDDEN TRAP #3: Exclusive Jurisdiction\nPrimary Clause: Clause 12\nHidden Mechanism: Exclusive jurisdiction of Indian courts\nHow It Works: Disputes will be resolved in Indian courts, potentially unfavorable to one party.\nReal Meaning: One party may be at a disadvantage in case of a dispute.\nSeverity: HIGH\nDetection Method: Cross-Reference Mapping\nConfidence: 0.8\n\nHIDDEN TRAP #4: Reasonable Opportunity\nPrimary Clause: Clause 7\nHidden Mechanism: Reasonable opportunity to o...ance with the laws of India.\"\nHow It Works: The Receiving Party may not have a reasonable opportunity to comply with the laws of India.\nReal Meaning: The Receiving Party may be at risk of non-compliance with Indian laws.\nSeverity: MEDIUM\nDetection Method: Definition Analysis\nConfidence: 0.7\n\nDetection Summary:\n- Total Hidden Risks Found: 4\n- Regex Matches: 2 (LLM Confirmed: 2, False Positives: 0)\n- Definitional Traps: 2\n- Cross-Reference Traps: 1\n- Combined Risk Multipliers: None\n\nVENDOR & JURISDICTION INTELLIGENCE:\nVendor Name: Not specified\nVendor Location: Not specified\nVendor Classification: Not specified\nGoverning Law: Laws of India\nJurisdiction: Exclusive jurisdiction of Indian courts\nCompliance Level Required: STRICT\nJurisdiction Risks: The vendor's identity and location are not specified, potentially creating enforcement challenges.\n\nINDIAN CONTRACT ACT COMPLIANCE:\n Compliant Items:\n- Clause 1: Definition of Confidential Information\n- Clause 3: Use of Confidential Information exclusively for the Purpose\n- Clause 4: Disclosure of Confidential Information to employees on a need-to-know basis\n- Clause 5: Protection of Confidential Information by the Receiving Party\n- Clause 6: Exceptions to confidentiality obligations (public domain, prior possession, etc.)\n\n Violations Found:\n- None\n\n Risks Identified:\n- The agreement does not specify the duration of the NDA, which may lead to uncertainty and disputes.\n\n10XDS COMPANY POLICY COMPLIANCE:\n Blocking Violations:\n- None\n\n Missing Mandatory Protections:\n- Data Protection Clause\n- IP Ownership Clarity Clause\n\n Preference Gaps:\n- The agreement does not specify the jurisdiction and governing law clauses, which may not be favorable to one party.\n\nUNIVERSAL NDA CRITERIA ASSESSMENT:\nProtections Found: 7 out of 9\nProtections Missing: 2 out of 9\n1. Data Protection Clause\n2. IP Ownership Clarity Clause\n\nOVERALL RISK ASSESSMENT:\nRisk Score: 45 points\nRisk Percentage: 44.44%\nRisk Level: MODERATE RISK\n\nCategory Breakdown:\n- Hidden Risks: 20 points\n- Indian Law: 0 points\n- Company Policy: 15 points\n- Universal Criteria: 10 points\n- Jurisdiction Risks: 0 points\n\nRECOMMENDATION:\nNEGOTIATE FIRST\nThe agreement has several critical concerns, including unlimited liability exposure, overly broad definition of Confidential Information, and exclusive jurisdiction of Indian courts. It is recommended to negotiate the inclusion of a liability cap clause, a data protection clause, and an IP ownership clarity clause to mitigate these risks.\n\nRECOMMENDED COUNTER-PROPOSALS:\n---PROPOSAL START---\nName: Liability Cap Clause\nPriority: BLOCKING\nIssue: Unlimited liability exposure for the Receiving Party.\nClause: The Receiving Party's liability for damages under this Agreement shall be limited to an amount equal to the total fees paid by the Disclosing Party to the Receiving Party during the term of this Agreement. In no event shall the Receiving Party be liable for any consequential, indirect, special, or punitive damages. The parties agree that the limitations of liability set forth in this clause are reasonable and fair.\nBenefit: Limits the Receiving Party's liability exposure and provides a fair and reasonable cap on damages.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Data Protection Clause\nPriority: HIGH\nIssue: No explicit data protection clause exists, exposing the parties to data protection law violations.\nClause: Each party shall comply with all applicable data protection laws and regulations, including but not limited to the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023, in connection with any personal data processed under this Agreement. The Receiving Party shall implement and maintain appropriate technical and organizational measures to protect personal data against unauthorized or unlawful processing and against accidental loss, destruction, damage, alteration, or disclosure. Both parties agree to notify each other within 24 hours of any data breach or suspected breach.\nBenefit: Ensures compliance with Indian data protection laws and limits liability exposure.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: IP Ownership Clarity Clause\nPriority: HIGH\nIssue: No clear statement on IP ownership exists, potentially leading to disputes.\nClause: The parties agree that all intellectual property rights, including but not limited to patents, trademarks, copyrights, and trade secrets, shall remain the exclusive property of the respective party. Neither party shall acquire any rights, title, or interest in the other party's intellectual property.\nBenefit: Clarifies IP ownership and avoids potential disputes.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Return/Destruction of Confidential Information Clause\nPriority: MEDIUM\nIssue: No clause exists for return or destruction of confidential information upon termination.\nClause: Upon termination of this Agreement, the Receiving Party shall return to the Disclosing Party all confidential information, including but not limited to documents, materials, and electronic data, within a period of 30 days. The Receiving Party shall also destroy all copies of confidential information in its possession, including but not limited to electronic data, and provide a certificate of destruction to the Disclosing Party.\nBenefit: Ensures the return or destruction of confidential information upon termination and limits the risk of unauthorized disclosure.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: NDA Duration and Confidentiality Period Clause\nPriority: MEDIUM\nIssue: No specific duration is mentioned for the NDA, and the confidentiality period post-termination is not specified.\nClause: The obligations of the Receiving Party under this Agreement shall remain in effect for a period of 5 years from the date of termination. The confidentiality period shall commence on the effective date of this Agreement and shall continue for a period of 5 years from the date of termination.\nBenefit: Specifies the NDA duration and confidentiality period post-termination, providing clarity and certainty.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Jurisdiction and Governing Law Clause\nPriority: MEDIUM\nIssue: The jurisdiction and governing law clauses may not be favorable to one party.\nClause: This Agreement shall be governed and construed in accordance with the laws of India. The parties agree to submit to the exclusive jurisdiction of the courts of [insert location], India.\nBenefit: Confirms the jurisdiction and governing law clauses, ensuring compliance with 10xds requirements.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Vendor Identity and Location Verification Clause\nPriority: MEDIUM\nIssue: The vendor's identity and location are not specified, potentially creating enforcement challenges.\nClause: The vendor shall provide the Disclosing Party with its identity and location, including but not limited to its name, address, and contact information. The vendor shall also provide the Disclosing Party with any changes to its identity and location within a period of 30 days.\nBenefit: Verifies the vendor's identity and location, ensuring enforceability and compliance with 10xds requirements.\n---PROPOSAL END---"
+  "_raw_output": "=== LEGAL DOCUMENT RISK ASSESSMENT REPORT ===\n\nEXECUTIVE SUMMARY:\nThe overall risk level of this Agreement is HIGH (142% risk percentage), primarily due to the presence of blocking violations, high severity issues, and medium severity issues. Critical concerns include unlimited liability, perpetual confidentiality without exceptions, automatic IP transfer, and one-sided termination restrictions. It is essential to address these concerns to ensure the Agreement is compliant with the Indian Contract Act, 10xds company policy, and universal protective criteria.\n\n HIDDEN & DISGUISED RISKS:\nHIDDEN TRAP #1: Unlimited Liability\nPrimary Clause: Clause 10\nHidden Mechanism: Unlimited liability clause\nHow It Works: The Receiving Party assumes unlimited liability for any damages or losses arising from the disclosure of Confidential Information.\nReal Meaning: The Receiving Party may be held liable for unlimited amounts, potentially leading to significant financial losses.\nSeverity: CRITICAL\nDetection Method: Regex\nConfidence: 0.9\n\nHIDDEN TRAP #2: Overly Broad Definition\nPrimary Clause: Clause 1\nHidden Mechanism: Overly broad definition of Confidential Information\nHow It Works: The definition of Confidential Information is too broad, potentially capturing non-confidential information.\nReal Meaning: The Receiving Party may be obligated to protect non-confidential information, leading to unnecessary restrictions.\nSeverity: HIGH\nDetection Method: Definition Analysis\nConfidence: 0.8\n\nHIDDEN TRAP #3: Exclusive Jurisdiction\nPrimary Clause: Clause 12\nHidden Mechanism: Exclusive jurisdiction clause\nHow It Works: The courts at [__] India have exclusive jurisdiction over any disputes arising from the Agreement.\nReal Meaning: The Parties may be required to litigate disputes in a foreign jurisdiction, potentially leading to increased costs and complexity.\nSeverity: HIGH\nDetection Method: Regex\nConfidence: 0.8\n\nHIDDEN TRAP #4: Post-Termination Obligations\nPrimary Clause: Clause 11\nHidden Mechanism: Post-termination obligations of the Receiving Party\nHow It Works: The Receiving Party is obligated to protect Confidential Information after termination, potentially leading to information security risks.\nReal Meaning: The Receiving Party may be required to return or destroy Confidential Information, potentially leading to information security risks.\nSeverity: MEDIUM\nDetection Method: Regex\nConfidence: 0.7\n\nDetection Summary:\n- Total Hidden Risks Found: 4\n- Regex Matches: 3 (LLM Confirmed: 3, False Positives: 0)\n- Definitional Traps: 1\n- Cross-Reference Traps: 0\n- Combined Risk Multipliers: None\n\nVENDOR & JURISDICTION INTELLIGENCE:\nVendor Name: [Unknown]\nVendor Location: [Unknown]\nVendor Classification: [Unknown]\nGoverning Law: Laws of India\nJurisdiction: [__] India\nCompliance Level Required: STRICT\nJurisdiction Risks: Enforcement challenges due to unknown vendor location and jurisdiction.\n\nINDIAN CONTRACT ACT COMPLIANCE:\n Compliant Items:\n- Clause 1: Definition of Confidential Information\n- Clause 2: Types of Confidential Information\n- Clause 3: Use of Confidential Information\n- Clause 4: Disclosure of Confidential Information to employees\n- Clause 5: Protection of Confidential Information\n- Clause 6: Exceptions to confidentiality obligations\n\n Violations Found:\n- Unlimited liability (Clause 10)\n- Perpetual confidentiality without exceptions (Clause 1)\n- Automatic IP transfer (Clause 1)\n- One-sided termination restrictions (Clause 11)\n\n Risks Identified:\n- Information security risks due to post-termination obligations (Clause 11)\n- IP disputes due to lack of IP ownership clarity (Clause 1)\n\n10XDS COMPANY POLICY COMPLIANCE:\n Blocking Violations:\n- Unlimited liability (Clause 10)\n- Perpetual confidentiality without exceptions (Clause 1)\n- Automatic IP transfer (Clause 1)\n- One-sided termination restrictions (Clause 11)\n\n Missing Mandatory Protections:\n- Data protection clause\n- IP ownership clarity clause\n- Mutual termination clause\n- Return/destruction of information clause\n\n Preference Gaps:\n- NDA duration clause\n- Confidentiality period post-termination clause\n\nUNIVERSAL NDA CRITERIA ASSESSMENT:\nProtections Found: 4 out of 10\nProtections Missing: 6 out of 10\n1. Data protection clause\n2. IP ownership clarity clause\n3. Mutual termination clause\n4. Return/destruction of information clause\n5. NDA duration clause\n6. Confidentiality period post-termination clause\n\nOVERALL RISK ASSESSMENT:\nRisk Score: 142 points\nRisk Percentage: 142%\nRisk Level: HIGH RISK\n\nCategory Breakdown:\n- Hidden Risks: 60 points (42.25% of total points)\n- Indian Law: 20 points (14.08% of total points)\n- Company Policy: 60 points (42.25% of total points)\n- Universal Criteria: 2 points (1.41% of total points)\n- Jurisdiction Risks: 0 points (0% of total points)\n\nRECOMMENDATION:\nDO NOT SIGN AS-IS. Negotiate the preferred terms to ensure they align with 10xds' requirements.\n\nRECOMMENDED COUNTER-PROPOSALS:\n---PROPOSAL START---\nName: Unlimited Liability Cap Clause\nPriority: BLOCKING\nIssue: No explicit liability cap mentioned in the Agreement, exposing 10xds to unlimited liability.\nClause: In no event shall either Party be liable for any consequential, indirect, special, punitive, or incidental damages arising out of or related to this Agreement. The total liability of each Party under this Agreement shall not exceed the amount of [__] (the \"Liability Cap\").\nBenefit: Limits liability exposure to a specified amount, reducing financial risk.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Perpetual Confidentiality Exception Clause\nPriority: BLOCKING\nIssue: Perpetual confidentiality without exceptions, potentially restricting 10xds' ability to disclose information.\nClause: The obligations of confidentiality under this Agreement shall not apply to any Confidential Information that is required to be disclosed by law, regulation, or court order, provided that the Receiving Party gives the Disclosing Party prompt written notice of such requirement.\nBenefit: Provides exceptions to perpetual confidentiality, allowing for necessary disclosures.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: IP Ownership Clarity Clause\nPriority: HIGH\nIssue: No explicit IP ownership clause mentioned in the Agreement, potentially leading to IP disputes.\nClause: All intellectual property rights, including but not limited to patents, trademarks, copyrights, and trade secrets, shall remain the exclusive property of the respective Party. Neither Party shall acquire any right, title, or interest in the other Party's intellectual property.\nBenefit: Clarifies IP ownership, reducing the risk of IP disputes.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Mutual Termination Clause\nPriority: HIGH\nIssue: One-sided termination restrictions, potentially restricting 10xds' ability to terminate the Agreement.\nClause: Either Party may terminate this Agreement upon [__] days' written notice to the other Party. Upon termination, all obligations of confidentiality and non-disclosure shall continue in effect.\nBenefit: Provides mutual termination rights, allowing for more flexibility.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Data Protection Clause\nPriority: HIGH\nIssue: No explicit data protection terms mentioned in the Agreement, potentially exposing 10xds to data protection risks.\nClause: Each Party shall comply with all applicable data protection laws and regulations, including but not limited to the Information Technology Act, 2000, and the Digital Personal Data Protection Act, 2023. The Receiving Party shall implement and maintain appropriate technical and organizational measures to protect personal data against unauthorized access, loss, or disclosure.\nBenefit: Ensures compliance with Indian data protection laws, reducing data protection risks.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Return/Destruction of Information Clause\nPriority: MEDIUM\nIssue: No explicit post-termination obligations mentioned in the Agreement, potentially leading to information security risks.\nClause: Upon termination or expiration of this Agreement, the Receiving Party shall return to the Disclosing Party all Confidential Information, including but not limited to documents, materials, and electronic data. The Receiving Party shall also destroy all copies of Confidential Information, except as required by law or regulation.\nBenefit: Ensures the secure return and destruction of Confidential Information, reducing information security risks.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Jurisdiction and Governing Law Clause\nPriority: MEDIUM\nIssue: The specific location of the jurisdiction is not specified, potentially creating enforcement challenges.\nClause: This Agreement shall be governed and construed in accordance with the laws of India. The competent courts at [__] India shall have the sole and exclusive jurisdiction over any dispute that arises in relation to this Agreement.\nBenefit: Specifies the jurisdiction and governing law, reducing enforcement challenges.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: NDA Duration Clause\nPriority: LOW\nIssue: No explicit duration mentioned in the Agreement, potentially leading to uncertainty.\nClause: The obligations of confidentiality under this Agreement shall remain in effect for a period of [__] years from the date of termination.\nBenefit: Provides clarity on the duration of confidentiality obligations, reducing uncertainty.\n---PROPOSAL END---\n\n---PROPOSAL START---\nName: Confidentiality Period Post-Termination Clause\nPriority: LOW\nIssue: No explicit post-termination confidentiality period mentioned in the Agreement, potentially leading to uncertainty.\nClause: The obligations of confidentiality under this Agreement shall continue in effect for a period of [__] years after termination or expiration of this Agreement.\nBenefit: Provides clarity on the post-termination confidentiality period, reducing uncertainty.\n---PROPOSAL END---"
 }
