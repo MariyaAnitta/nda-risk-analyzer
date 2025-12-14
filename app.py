@@ -1324,7 +1324,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     current_trap = None
     trap_number = 0
 
-    
+    # Updated end markers to be more precise
     END_MARKERS = [
         "DETECTION SUMMARY:",
         "VENDOR & JURISDICTION",
@@ -1354,6 +1354,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                 if trap_match:
                     trap_number = int(trap_match.group(1))
                     trap_name = trap_match.group(2).strip()
+                    # Remove "Name:" prefix if present
                     trap_name = re.sub(r'^Name:\s*', '', trap_name, flags=re.IGNORECASE)
                     current_trap = {
                         'name': trap_name,
@@ -1367,24 +1368,19 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         # ===== END HIDDEN SECTION =====
         if in_hidden_section:
-            # ✅ SIMPLE END CHECK (matches applocal.py)
+            # Check if we've reached the end
             if any(marker in upper for marker in END_MARKERS):
                 if current_trap and current_trap.get('name'):
                     hidden_risks.append(current_trap)
                     logger.info(f"  ✅ Saved final trap: {current_trap['name']}")
                 logger.info(f"  🛑 Line {i}: Hidden Risks section ended")
-                break  # Exit cleanly
+                break
 
         # ===== PARSE TRAP CONTENT =====
         if in_hidden_section:
             
-            # Check for new trap starting
-            trap_match = re.search(
-                r'[\*\*]*\s*HIDDEN TRAP\s*#?(\d+)[:\s]*(.+)',
-                stripped,
-                re.IGNORECASE
-            )
-            
+            # Check for new trap starting (either with ** or without)
+            trap_match = re.search(r'\*?\*?HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
             if trap_match:
                 # Save previous trap
                 if current_trap and current_trap.get('name'):
@@ -1393,8 +1389,8 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                 
                 trap_number = int(trap_match.group(1))
                 trap_name = trap_match.group(2).strip()
+                # Remove "Name:" prefix if present
                 trap_name = re.sub(r'^Name:\s*', '', trap_name, flags=re.IGNORECASE)
-                trap_name = re.sub(r'^\*+\s*', '', trap_name)
                 
                 current_trap = {
                     'name': trap_name,
@@ -1418,10 +1414,11 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     continue
 
                 # Primary Clause
-                if re.match(r'^Primary Clause', stripped, re.IGNORECASE):
-                    content = re.sub(r'^Primary Clause[:\s]*', '', stripped, flags=re.IGNORECASE).strip()
+                if stripped.startswith("Primary Clause:"):
+                    content = stripped.replace("Primary Clause:", "", 1).strip()
                     current_trap['primary_clause'] = content
                     
+                    # Extract clause number
                     clause_match = re.search(r'Clause\s+(\d+[A-Za-z]?)', content, re.IGNORECASE)
                     if clause_match:
                         current_trap['clause_number'] = clause_match.group(1)
@@ -1430,8 +1427,8 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     continue
 
                 # Real Meaning / Real Impact
-                if re.match(r'^Real\s+(Meaning|Impact)', stripped, re.IGNORECASE):
-                    content = re.sub(r'^Real\s+(Meaning|Impact)[:\s]*', '', stripped, flags=re.IGNORECASE).strip()
+                if re.match(r'^Real (Meaning|Impact)', stripped, re.IGNORECASE):
+                    content = re.sub(r'^Real (Meaning|Impact)[:\s]*', '', stripped, flags=re.IGNORECASE).strip()
                     current_trap['real_meaning'] = content
                     logger.info(f"      💡 Real Meaning: {content[:50]}...")
                     continue
@@ -1439,6 +1436,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                 # Severity
                 if stripped.startswith("Severity:"):
                     severity_raw = stripped.replace("Severity:", "", 1).strip()
+                    # Remove any parenthetical notes
                     severity_clean = re.sub(r'\s*\(.*?\)\s*', '', severity_raw).strip()
                     current_trap['severity'] = severity_clean
                     logger.info(f"      ⚠️ Severity: {severity_clean}")
@@ -1458,11 +1456,11 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             seen_clauses.add(clause_key)
             deduplicated_risks.append(risk)
         else:
-            logger.info(f"  🗑️ Duplicate removed: {risk.get('name', '<unnamed>')}")
+            logger.info(f"  Duplicate removed: {risk.get('name', '<unnamed>')}")
 
     hidden_risks = deduplicated_risks
-
-    logger.info(f"🎯 FINAL: Extracted {len(hidden_risks)} hidden risks")
+    
+    logger.info(f" FINAL: Extracted {len(hidden_risks)} hidden risks")
     for idx, risk in enumerate(hidden_risks, 1):
         logger.info(f"  {idx}. {risk.get('name', 'Unknown')} - {risk.get('severity', 'N/A')}")
 
@@ -1615,14 +1613,13 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # First, extract the counts from the report
     found_count = 0
     missing_count = 0
-    total_count = 10  # Default to 10 universal criteria
-
+    total_count = len(criteria) 
     for line in lines:
         if "Protections Found:" in line and "out of" in line:
             match = re.search(r'(\d+)\s+out of\s+(\d+)', line)
             if match:
                 found_count = int(match.group(1))
-                total_count = int(match.group(2))
+                total_count = int(match.group(2))  # This should match len(criteria)
                 missing_count = total_count - found_count
                 logger.info(f"📊 Protections: {found_count} found, {missing_count} missing, {total_count} total")
                 break
@@ -1688,8 +1685,9 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         # === PARSE MISSING PROTECTIONS ===
         if in_missing and stripped:
-            # New missing item
-            if (re.match(r'^\d+\.', stripped) or 
+            
+            if (re.match(r'^[-•\*]\s+', stripped) or          # "- Item" or "• Item" or "* Item"
+                re.match(r'^\d+\.', stripped) or               # "1. Item"
                 stripped.startswith("✗") or 
                 stripped.startswith("NOT FOUND:")):
 
@@ -1697,12 +1695,17 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     protections_missing.append(current_item)
                     logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
 
-                name = re.sub(r'^[\d\.\s✗]+|^NOT FOUND:\s*', "", stripped)
-                current_item = {"name": name, "risk": None}
+                
+                name = re.sub(r'^[-•\*\d\.\s✗]+|^NOT FOUND:\s*', "", stripped).strip()
+                
+                if name:  # ✅ Only create item if name is non-empty
+                    current_item = {"name": name, "risk": None}
+                    logger.info(f"    → Extracted missing protection: {name[:50]}")
 
-            # Risk line
+            # Risk line (optional sub-field)
             elif current_item and "Risk:" in stripped:
                 current_item["risk"] = stripped.split("Risk:", 1)[1].strip()
+                logger.info(f"    → Added risk: {current_item['risk'][:50]}")
 
     # === FALLBACK: Use counts if parsing failed ===
     if len(protections_found) == 0 and found_count > 0:
@@ -1892,11 +1895,12 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # ============================
     return {
         "metadata": {
-            "document_path": document_path,
-            "analysis_date": datetime.now().isoformat(),
-            "criteria": criteria,
-            "analysis_version": "3.0-hidden-risk-detection"
-        },
+        "document_path": document_path,
+        "analysis_date": datetime.now().isoformat(),
+        "criteria": criteria,  # ← This should contain the EDITED criteria
+        "total_criteria_count": len(criteria),  # ← ADD THIS
+        "analysis_version": "3.0-hidden-risk-detection"
+    },
         "summary": summary,
         "hidden_risks_detected": hidden_risks,  # ← This now works!
         "detection_methodology": {
