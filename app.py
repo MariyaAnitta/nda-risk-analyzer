@@ -1324,17 +1324,15 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     current_trap = None
     trap_number = 0
 
-    # Primary end markers (strict)
-    PRIMARY_END_MARKERS = [
+    
+    END_MARKERS = [
         "DETECTION SUMMARY:",
-        "VENDOR & JURISDICTION"
-    ]
-
-    # Secondary end markers (only if we haven't found any risks yet)
-    SECONDARY_END_MARKERS = [
+        "VENDOR & JURISDICTION",
         "INDIAN CONTRACT ACT",
         "10XDS COMPANY",
-        "UNIVERSAL NDA"
+        "UNIVERSAL NDA",
+        "COUNTER-PROPOSALS",
+        "RECOMMENDED COUNTER"
     ]
 
     logger.info("🔍 Starting hidden risks extraction...")
@@ -1347,12 +1345,12 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         # ===== START HIDDEN SECTION =====
         if not in_hidden_section:
-            if "HIDDEN" in upper and ("RISK" in upper or "TRAP" in upper or "DISGUISED" in upper):
+            if "HIDDEN" in upper and ("RISK" in upper or "TRAP" in upper):
                 in_hidden_section = True
                 logger.info(f"  ✅ Line {i}: Hidden Risks section started")
                 
                 # Check if trap starts on same line as header
-                trap_match = re.search(r'HIDDEN TRAP #?(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
+                trap_match = re.search(r'HIDDEN TRAP #(\d+)[:\s]+(.+)', stripped, re.IGNORECASE)
                 if trap_match:
                     trap_number = int(trap_match.group(1))
                     trap_name = trap_match.group(2).strip()
@@ -1369,26 +1367,18 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         # ===== END HIDDEN SECTION =====
         if in_hidden_section:
-            # Primary end markers - always stop
-            if any(marker in upper for marker in PRIMARY_END_MARKERS):
+            # ✅ SIMPLE END CHECK (matches applocal.py)
+            if any(marker in upper for marker in END_MARKERS):
                 if current_trap and current_trap.get('name'):
                     hidden_risks.append(current_trap)
                     logger.info(f"  ✅ Saved final trap: {current_trap['name']}")
-                logger.info(f"  🛑 Line {i}: Hidden Risks section ended (primary marker)")
-                break
-            
-            # Secondary end markers - only stop if we haven't found risks yet
-            if len(hidden_risks) == 0 and any(marker in upper for marker in SECONDARY_END_MARKERS):
-                if current_trap and current_trap.get('name'):
-                    hidden_risks.append(current_trap)
-                    logger.info(f"  ✅ Saved final trap: {current_trap['name']}")
-                logger.info(f"  🛑 Line {i}: Hidden Risks section ended (secondary marker, no risks found)")
-                break
+                logger.info(f"  🛑 Line {i}: Hidden Risks section ended")
+                break  # Exit cleanly
 
         # ===== PARSE TRAP CONTENT =====
         if in_hidden_section:
             
-            # Match various trap header formats (more flexible)
+            # Check for new trap starting
             trap_match = re.search(
                 r'[\*\*]*\s*HIDDEN TRAP\s*#?(\d+)[:\s]*(.+)',
                 stripped,
@@ -1403,9 +1393,8 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                 
                 trap_number = int(trap_match.group(1))
                 trap_name = trap_match.group(2).strip()
-                # Clean up name
                 trap_name = re.sub(r'^Name:\s*', '', trap_name, flags=re.IGNORECASE)
-                trap_name = re.sub(r'^\*+\s*', '', trap_name)  # Remove leading asterisks
+                trap_name = re.sub(r'^\*+\s*', '', trap_name)
                 
                 current_trap = {
                     'name': trap_name,
@@ -1417,7 +1406,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                 logger.info(f"    🎭 New trap #{trap_number}: {trap_name}")
                 continue
 
-            # Parse trap fields (existing code continues)
+            # Parse trap fields
             if current_trap:
                 
                 # Name field (if separate line)
@@ -1428,12 +1417,11 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                         logger.info(f"      📝 Name: {name}")
                     continue
 
-                # Primary Clause (flexible matching)
+                # Primary Clause
                 if re.match(r'^Primary Clause', stripped, re.IGNORECASE):
                     content = re.sub(r'^Primary Clause[:\s]*', '', stripped, flags=re.IGNORECASE).strip()
                     current_trap['primary_clause'] = content
                     
-                    # Extract clause number
                     clause_match = re.search(r'Clause\s+(\d+[A-Za-z]?)', content, re.IGNORECASE)
                     if clause_match:
                         current_trap['clause_number'] = clause_match.group(1)
@@ -1474,66 +1462,9 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
     hidden_risks = deduplicated_risks
 
-    # ===== FALLBACK: Check raw text if no risks parsed =====
-    if len(hidden_risks) == 0:
-        logger.warning("⚠️ Primary parsing found 0 risks - trying fallback extraction...")
-        
-        # Find the hidden risks section manually
-        full_text = '\n'.join(lines)
-        hidden_section_match = re.search(
-            r'HIDDEN.*?(?:RISKS|TRAPS)(.*?)(?=DETECTION SUMMARY|VENDOR|INDIAN CONTRACT ACT|10XDS|$)',
-            full_text,
-            re.DOTALL | re.IGNORECASE
-        )
-        
-        if hidden_section_match:
-            hidden_section_text = hidden_section_match.group(1)
-            logger.info(f"📍 Found hidden section ({len(hidden_section_text)} chars)")
-            
-            # Extract traps using regex (more lenient)
-            trap_blocks = re.findall(
-                r'HIDDEN TRAP\s*#?(\d+)[:\s]*([^\n]+)(.*?)(?=HIDDEN TRAP|DETECTION SUMMARY|$)',
-                hidden_section_text,
-                re.DOTALL | re.IGNORECASE
-            )
-            
-            for trap_num, trap_name, trap_content in trap_blocks:
-                # Extract fields from content
-                primary_clause = ''
-                clause_match = re.search(r'Primary Clause[:\s]*(.+?)(?=\n|Hidden|Real|Severity|$)', trap_content, re.IGNORECASE | re.DOTALL)
-                if clause_match:
-                    primary_clause = clause_match.group(1).strip()[:200]
-                
-                real_meaning = ''
-                meaning_match = re.search(r'Real\s+(?:Meaning|Impact)[:\s]*(.+?)(?=\n|Severity|Detection|$)', trap_content, re.IGNORECASE | re.DOTALL)
-                if meaning_match:
-                    real_meaning = meaning_match.group(1).strip()[:200]
-                
-                severity = 'MEDIUM'
-                severity_match = re.search(r'Severity[:\s]*(CRITICAL|HIGH|MEDIUM|LOW)', trap_content, re.IGNORECASE)
-                if severity_match:
-                    severity = severity_match.group(1).upper()
-                
-                clause_number = ''
-                clause_num_match = re.search(r'Clause\s+(\d+[A-Za-z]?)', primary_clause, re.IGNORECASE)
-                if clause_num_match:
-                    clause_number = clause_num_match.group(1)
-                
-                hidden_risks.append({
-                    'name': trap_name.strip(),
-                    'primary_clause': primary_clause,
-                    'clause_number': clause_number,
-                    'real_meaning': real_meaning,
-                    'severity': severity
-                })
-                logger.info(f"  🔧 Fallback extracted trap #{trap_num}: {trap_name.strip()}")
-        
-        logger.info(f"✅ Fallback extraction: {len(hidden_risks)} risks found")
-
     logger.info(f"🎯 FINAL: Extracted {len(hidden_risks)} hidden risks")
     for idx, risk in enumerate(hidden_risks, 1):
         logger.info(f"  {idx}. {risk.get('name', 'Unknown')} - {risk.get('severity', 'N/A')}")
-
 
 
 
@@ -1684,13 +1615,14 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # First, extract the counts from the report
     found_count = 0
     missing_count = 0
-    total_count = len(criteria) 
+    total_count = 10  # Default to 10 universal criteria
+
     for line in lines:
         if "Protections Found:" in line and "out of" in line:
             match = re.search(r'(\d+)\s+out of\s+(\d+)', line)
             if match:
                 found_count = int(match.group(1))
-                total_count = int(match.group(2))  # This should match len(criteria)
+                total_count = int(match.group(2))
                 missing_count = total_count - found_count
                 logger.info(f"📊 Protections: {found_count} found, {missing_count} missing, {total_count} total")
                 break
@@ -1756,9 +1688,8 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         # === PARSE MISSING PROTECTIONS ===
         if in_missing and stripped:
-            
-            if (re.match(r'^[-•\*]\s+', stripped) or          # "- Item" or "• Item" or "* Item"
-                re.match(r'^\d+\.', stripped) or               # "1. Item"
+            # New missing item
+            if (re.match(r'^\d+\.', stripped) or 
                 stripped.startswith("✗") or 
                 stripped.startswith("NOT FOUND:")):
 
@@ -1766,17 +1697,13 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     protections_missing.append(current_item)
                     logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
 
-                
-                name = re.sub(r'^[-•\*\d\.\s✗]+|^NOT FOUND:\s*', "", stripped).strip()
-                
-                if name:  # ✅ Only create item if name is non-empty
-                    current_item = {"name": name, "risk": None}
-                    logger.info(f"    → Extracted missing protection: {name[:50]}")
+                name = re.sub(r'^[\d\.\s✗]+|^NOT FOUND:\s*', "", stripped)
+                current_item = {"name": name, "risk": None}
 
-            # Risk line (optional sub-field)
+            # Risk line
             elif current_item and "Risk:" in stripped:
                 current_item["risk"] = stripped.split("Risk:", 1)[1].strip()
-                logger.info(f"    → Added risk: {current_item['risk'][:50]}")
+
     # === FALLBACK: Use counts if parsing failed ===
     if len(protections_found) == 0 and found_count > 0:
         logger.warning(f"⚠️ Parsing failed - using count-based fallback for {found_count} found protections")
@@ -1965,12 +1892,11 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # ============================
     return {
         "metadata": {
-        "document_path": document_path,
-        "analysis_date": datetime.now().isoformat(),
-        "criteria": criteria,  # ← This should contain the EDITED criteria
-        "total_criteria_count": len(criteria),  # ← ADD THIS
-        "analysis_version": "3.0-hidden-risk-detection"
-    },
+            "document_path": document_path,
+            "analysis_date": datetime.now().isoformat(),
+            "criteria": criteria,
+            "analysis_version": "3.0-hidden-risk-detection"
+        },
         "summary": summary,
         "hidden_risks_detected": hidden_risks,  # ← This now works!
         "detection_methodology": {
@@ -1995,6 +1921,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
         "risk_assessment": risk,
         "recommendation": recommendation.strip()
     }
+
 
 
 def validate_and_fix_risk_level(json_data: dict) -> dict:
