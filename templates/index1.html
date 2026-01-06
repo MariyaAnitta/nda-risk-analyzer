@@ -1130,18 +1130,18 @@ html += `
             </p>
 
             <ul style="margin: 0; padding-left: 20px; list-style: disc;">
-                ${data.protections_missing.map(item => `
-                    <li style="font-size: 12px; color: #7f1d1d; margin-bottom: 4px;">
-                        ${item.name || item}
-                    </li>
-                `).join('')}
-            </ul>
-            
-            ${data.protections_missing.length > 5 ? `
-                <p style="font-size: 11px; color: #92400e; margin-top: 8px; font-style: italic;">
+                ${data.protections_missing.map(item => {
+                    // Handle both object format {name: "...", risk: "..."} and string format
+                    const protectionName = typeof item === 'object' ? (item.name || item) : item;
+                    const riskNote = typeof item === 'object' && item.risk ? ` - ${item.risk}` : '';
                     
-                </p>
-            ` : ''}
+                    return `
+                        <li style="font-size: 12px; color: #7f1d1d; margin-bottom: 4px; line-height: 1.5;">
+                            ${protectionName}${riskNote}
+                        </li>
+                    `;
+                }).join('')}
+            </ul>
         </div>
     ` : `
         <div style="padding: 12px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 16px;">

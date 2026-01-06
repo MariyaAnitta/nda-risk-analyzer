@@ -1688,8 +1688,9 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
         # === PARSE MISSING PROTECTIONS ===
         if in_missing and stripped:
             
+            # Match: numbered list (1., 2., etc), bullet points (-, •, *), or checkmarks (✗)
             if (re.match(r'^[-•\*]\s+', stripped) or          # "- Item" or "• Item" or "* Item"
-                re.match(r'^\d+\.', stripped) or               # "1. Item"
+                re.match(r'^\d+\.\s+', stripped) or           # "1. Item" (note the \s+ for space after dot)
                 stripped.startswith("✗") or 
                 stripped.startswith("NOT FOUND:")):
 
@@ -1697,12 +1698,14 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     protections_missing.append(current_item)
                     logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
 
-                
+                # Extract name - remove all prefixes (numbers, bullets, etc)
                 name = re.sub(r'^[-•\*\d\.\s✗]+|^NOT FOUND:\s*', "", stripped).strip()
                 
                 if name:  # ✅ Only create item if name is non-empty
                     current_item = {"name": name, "risk": None}
                     logger.info(f"    → Extracted missing protection: {name[:50]}")
+                else:
+                    logger.warning(f"    ⚠️ Empty name after stripping: {stripped}")
 
             # Risk line (optional sub-field)
             elif current_item and "Risk:" in stripped:
