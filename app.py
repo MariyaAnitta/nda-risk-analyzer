@@ -563,30 +563,17 @@ report_generator = Agent(
     goal="Create a comprehensive, clean risk assessment report with all compliance dimensions.",
     backstory="""You are a professional legal risk report writer. Present information in a clean,
     easy-to-read format for HR/Legal teams.
-
+    
     REPORT STRUCTURE:
     1. Executive Summary (risk level + key concerns)
-    2. 🎭 HIDDEN & DISGUISED RISKS (NEW SECTION - comes early!)
+    2. 🎭 HIDDEN & DISGUISED RISKS (NEW SECTION - comes early!)  # NEW SECTION ADDED
     3. Vendor & Jurisdiction Intelligence
     4. Indian Contract Act Compliance
     5. 10xds Company Policy Compliance
     6. Universal NDA Criteria Assessment
     7. Risk Score & Recommendation
     8. Counter-Proposals
-
-    CRITICAL FOR SECTION 6 (Universal NDA Criteria Assessment):
-    ⚠️ IMPORTANT: The analysis is using a specific number of criteria.
-    This number will be provided in the task description.
-    You MUST use the exact count from the task, NOT from the universal_nda_criteria.json file.
-    Format MUST be: "Protections Found: X out of [EXACT_COUNT_FROM_TASK]"
-    Format MUST be: "Protections Missing: Y out of [EXACT_COUNT_FROM_TASK]"
-    Verify: X + Y must equal [EXACT_COUNT_FROM_TASK]
-    List each missing protection on a separate numbered line:
-        1. First missing protection name
-        2. Second missing protection name
-        3. etc.
-    Use NUMBERED format (1. 2. 3.) NOT bullet points (-, •, *)
-
+    
     FORMAT RULES:
     - NO decorative lines
     - NO repeated sections
@@ -925,104 +912,96 @@ START YOUR RESPONSE NOW WITH ---PROPOSAL START--- (no other text before it).
 )
     # TASK 9: Final Report
     report_task = Task(
-        description=f"""Create the FINAL COMPREHENSIVE REPORT in this structure.
+    description="""Create the FINAL COMPREHENSIVE REPORT in this structure:
 
-    CRITICAL: You are analyzing EXACTLY {len(risk_criteria)} Universal NDA criteria.
-    This number MUST appear in your Universal NDA Criteria Assessment section.
-    Use "Protections Found: X out of {len(risk_criteria)}" and "Protections Missing: Y out of {len(risk_criteria)}"
-    Verify: X + Y must equal {len(risk_criteria)}
+=== LEGAL DOCUMENT RISK ASSESSMENT REPORT ===
 
-    === LEGAL DOCUMENT RISK ASSESSMENT REPORT ===
+EXECUTIVE SUMMARY:
+[2-3 sentences: Overall risk level, main concerns, recommendation]
 
-    EXECUTIVE SUMMARY:
-    [2-3 sentences: Overall risk level, main concerns, recommendation]
+🎭 HIDDEN & DISGUISED RISKS:
+[List all hidden traps found by hidden_clause_detector agent]
+[Format: Use the 🎭 HIDDEN TRAP format with all fields: Name, Primary Clause, Hidden Mechanism, How It Works, Real Meaning, Severity, Detection Method, Confidence]
+[Group by: Definitional Traps / Cross-Reference Traps / Combined Risks]
 
-    🎭 HIDDEN & DISGUISED RISKS:
-    [List all hidden traps found by hidden_clause_detector agent]
-    [Format: Use the 🎭 HIDDEN TRAP format with all fields: Name, Primary Clause, Hidden Mechanism, How It Works, Real Meaning, Severity, Detection Method, Confidence]
-    [Group by: Definitional Traps / Cross-Reference Traps / Combined Risks]
+Detection Summary:
+- Total Hidden Risks Found: [N]
+- Regex Matches: [N] (LLM Confirmed: [N], False Positives: [N])
+- Definitional Traps: [N]
+- Cross-Reference Traps: [N]
+- Combined Risk Multipliers: [List any risks with amplification >2.0]
 
-    Detection Summary:
-    - Total Hidden Risks Found: [N]
-    - Regex Matches: [N] (LLM Confirmed: [N], False Positives: [N])
-    - Definitional Traps: [N]
-    - Cross-Reference Traps: [N]
-    - Combined Risk Multipliers: [List any risks with amplification >2.0]
+VENDOR & JURISDICTION INTELLIGENCE:
+Vendor Name: [name]
+Vendor Location: [location/country]
+Vendor Classification: [indian_domestic / international_tier1 / etc.]
+Governing Law: [law]
+Jurisdiction: [jurisdiction clause]
+Compliance Level Required: [STRICT / MODERATE / BASIC]
+Jurisdiction Risks: [list risks if any]
 
-    VENDOR & JURISDICTION INTELLIGENCE:
-    Vendor Name: [name]
-    Vendor Location: [location/country]
-    Vendor Classification: [indian_domestic / international_tier1 / etc.]
-    Governing Law: [law]
-    Jurisdiction: [jurisdiction clause]
-    Compliance Level Required: [STRICT / MODERATE / BASIC]
-    Jurisdiction Risks: [list risks if any]
+INDIAN CONTRACT ACT COMPLIANCE:
+✓ Compliant Items:
+[List items that comply with Indian Contract Act]
 
-    INDIAN CONTRACT ACT COMPLIANCE:
-    ✓ Compliant Items:
-    [List items that comply with Indian Contract Act]
+✗ Violations Found:
+[List violations with severity: BLOCKING/HIGH/MEDIUM]
 
-    ✗ Violations Found:
-    [List violations with severity: BLOCKING/HIGH/MEDIUM]
+⚠ Risks Identified:
+[List enforcement or legal risks]
 
-    ⚠ Risks Identified:
-    [List enforcement or legal risks]
+10XDS COMPANY POLICY COMPLIANCE:
+🚫 Blocking Violations:
+[List any blocking issues - if present, recommend DO NOT SIGN]
 
-    10XDS COMPANY POLICY COMPLIANCE:
-    🚫 Blocking Violations:
-    [List any blocking issues - if present, recommend DO NOT SIGN]
+✗ Missing Mandatory Protections:
+[List missing protections with severity]
 
-    ✗ Missing Mandatory Protections:
-    [List missing protections with severity]
+ℹ Preference Gaps:
+[List negotiable preference items]
 
-    ℹ Preference Gaps:
-    [List negotiable preference items]
+UNIVERSAL NDA CRITERIA ASSESSMENT:
+Protections Found: [F] out of [T]
+Protections Missing: [M] out of [T]
+1. [First missing protection name]
+2. [Second missing protection name]
+3. [etc...]
+FORMAT: Use NUMBERED LIST (1. 2. 3.) for missing protections, NOT bullet points (-)
 
-    UNIVERSAL NDA CRITERIA ASSESSMENT:
-    Protections Found: [F] out of {len(risk_criteria)}
-    Protections Missing: [M] out of {len(risk_criteria)}
+OVERALL RISK ASSESSMENT:
+Risk Score: [X] points
+Risk Percentage: [Y]%
+Risk Level: [LOW RISK / MODERATE RISK / HIGH RISK]
 
-    IMPORTANT: List missing protections using NUMBERED format (1. 2. 3.):
-    1. [First missing protection name]
-    2. [Second missing protection name]
-    3. [etc...]
+Category Breakdown:
+- Hidden Risks: [issues count]
+- Indian Law Compliance: [issues count]
+- Company Policy Compliance: [issues count]
+- Universal Criteria: [missing count]
+- Jurisdiction Risks: [risks count]
 
-    DO NOT use bullet points (-, •). Use numbered list as shown above.
+RECOMMENDATION:
+[SIGN AS-IS / NEGOTIATE FIRST / DO NOT SIGN]
+[2-3 sentences explaining why, highlighting top concerns]
 
-    OVERALL RISK ASSESSMENT:
-    Risk Score: [X] points
-    Risk Percentage: [Y]%
-    Risk Level: [LOW RISK / MODERATE RISK / HIGH RISK]
+RECOMMENDED COUNTER-PROPOSALS:
+[CRITICAL: Copy ALL proposals from mitigation_advisor task output. Use the EXACT ---PROPOSAL START/END--- format.]
+[DO NOT summarize or reformat. Include the full Name, Priority, Issue, Clause, and Benefit for each proposal.]
+[Minimum 5 proposals required.]
 
-    Category Breakdown:
-    - Hidden Risks: [issues count]
-    - Indian Law Compliance: [issues count]
-    - Company Policy Compliance: [issues count]
-    - Universal Criteria: [missing count]
-    - Jurisdiction Risks: [risks count]
-
-    RECOMMENDATION:
-    [SIGN AS-IS / NEGOTIATE FIRST / DO NOT SIGN]
-    [2-3 sentences explaining why, highlighting top concerns]
-
-    RECOMMENDED COUNTER-PROPOSALS:
-    [CRITICAL: Copy ALL proposals from mitigation_advisor task output. Use the EXACT ---PROPOSAL START/END--- format.]
-    [DO NOT summarize or reformat. Include the full Name, Priority, Issue, Clause, and Benefit for each proposal.]
-    [Minimum 5 proposals required.]
-
-    CRITICAL RULES:
-    - NO decorative lines
-    - NO markdown code fences
-    - Risk level in summary MUST match calculated percentage
-    - Ensure all sections are present
-    - Keep concise and professional
-    - MUST include complete counter-proposals section with all proposals from mitigation task
-    """,
-        expected_output="Complete formatted report with all compliance dimensions including hidden risks AND all counter-proposals from mitigation task in ---PROPOSAL START/END--- format",
-        agent=report_generator,
-        context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, 
-                company_policy_task, evaluate_task, consolidated_risk_task, mitigation_task]
-    )
+CRITICAL RULES:
+- NO decorative lines
+- NO markdown code fences
+- Risk level in summary MUST match calculated percentage
+- Ensure all sections are present
+- Keep concise and professional
+- MUST include complete counter-proposals section with all proposals from mitigation task
+""",
+    expected_output="Complete formatted report with all compliance dimensions including hidden risks AND all counter-proposals from mitigation task in ---PROPOSAL START/END--- format",
+    agent=report_generator,
+    context=[parse_task, hidden_risk_task, jurisdiction_task, indian_law_task, 
+             company_policy_task, evaluate_task, consolidated_risk_task, mitigation_task]
+)
 
     # ✅ RETURN ALL TASKS
     return [
@@ -1636,22 +1615,15 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # First, extract the counts from the report
     found_count = 0
     missing_count = 0
-    total_count = len(criteria)  # ✅ Always use actual criteria count as source of truth
-
+    total_count = len(criteria) 
     for line in lines:
         if "Protections Found:" in line and "out of" in line:
             match = re.search(r'(\d+)\s+out of\s+(\d+)', line)
             if match:
                 found_count = int(match.group(1))
-                # Don't override total_count - it comes from len(criteria), not the LLM report
-                reported_total = int(match.group(2))
-                
-                # Warn if mismatch
-                if reported_total != total_count:
-                    logger.warning(f"⚠️ LLM reported {reported_total} total but we have {total_count} criteria - using {total_count}")
-                
+                total_count = int(match.group(2))  # This should match len(criteria)
                 missing_count = total_count - found_count
-                logger.info(f"📊 Protections: {found_count} found, {missing_count} missing, {total_count} total (corrected)")
+                logger.info(f"📊 Protections: {found_count} found, {missing_count} missing, {total_count} total")
                 break
 
     # Now parse the actual protection details
@@ -1751,45 +1723,11 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             })
 
     if len(protections_missing) == 0 and missing_count > 0:
-        logger.warning(f"⚠️ Parsing failed - using enhanced fallback for {missing_count} missing protections")
-        
-        # ✅ ENHANCED: Try to extract actual names from raw report text
-        missing_names = []
-        in_missing_section = False
-        
-        for line in lines:
-            upper_line = line.upper()
-            
-            # Start extraction when we see the missing section
-            if "PROTECTIONS MISSING" in upper_line or ("MISSING:" in upper_line and "PROTECTION" in upper_line):
-                in_missing_section = True
-                continue
-            
-            # Stop extraction at next section
-            if in_missing_section:
-                if any(end in upper_line for end in ["RECOMMENDED", "OVERALL RISK", "---PROPOSAL", "COUNTER"]):
-                    break
-                
-                # Extract numbered items: "1. Item name"
-                stripped = line.strip()
-                match = re.match(r'^\d+\.\s+(.+)', stripped)
-                if match:
-                    name = match.group(1).strip()
-                    # Remove any trailing colons or extra formatting
-                    name = re.sub(r':$', '', name)
-                    missing_names.append(name)
-                    logger.info(f"  📝 Extracted: {name}")
-        
-        # Use extracted names or generic placeholders
+        logger.warning(f"⚠️ Parsing failed - using count-based fallback for {missing_count} missing protections")
         for i in range(missing_count):
-            if i < len(missing_names):
-                name = missing_names[i]
-            else:
-                name = f"Protection {i+1} (see detailed report)"
-            
             protections_missing.append({
-                "name": name,
-                "risk": None
+                "name": f"Missing protection {i+1} (detailed parsing failed - see report)",
+                "risk": "See detailed compliance section in report"
             })
 
     logger.info(f"✅ Final: {len(protections_found)} found, {len(protections_missing)} missing")
