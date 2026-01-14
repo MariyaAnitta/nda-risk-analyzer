@@ -1620,7 +1620,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
             match = re.search(r'(\d+)\s+out of\s+(\d+)', line)
             if match:
                 found_count = int(match.group(1))
-                total_count = int(match.group(2))  # This should match len(criteria)
+                #total_count = int(match.group(2))  # This should match len(criteria)
                 missing_count = total_count - found_count
                 logger.info(f"📊 Protections: {found_count} found, {missing_count} missing, {total_count} total")
                 break

@@ -797,11 +797,11 @@ syncDefaultCriteriaInput();
     const protectionsMissing = data.protections_missing ? data.protections_missing.length : 0;
 
     // Priority: metadata.total_criteria_count > metadata.criteria.length > sum
-    const totalCriteria = (data.metadata && data.metadata.total_criteria_count)
-        ? data.metadata.total_criteria_count
-        : (data.metadata && data.metadata.criteria && data.metadata.criteria.length)
-        ? data.metadata.criteria.length
-        : (protectionsFound + protectionsMissing);
+    const totalCriteria = (data.metadata && typeof data.metadata.total_criteria_count === 'number' && data.metadata.total_criteria_count > 0)
+    ? data.metadata.total_criteria_count
+    : (data.metadata && Array.isArray(data.metadata.criteria) && data.metadata.criteria.length > 0)
+    ? data.metadata.criteria.length
+    : Math.max(protectionsFound + protectionsMissing, 1);
 
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -1133,18 +1133,31 @@ html += `
                 ✗ Missing Protections (${data.protections_missing.length}):
             </p>
 
-            <ul style="margin: 0; padding-left: 20px; list-style: decimal;">
-                ${data.protections_missing.map(item => {
-                    const protectionName = typeof item === 'object' ? (item.name || item) : item;
-                    const riskNote = typeof item === 'object' && item.risk ? ` <span style="color: #dc2626; font-weight: 500;">- ${item.risk}</span>` : '';
-                    
-                    return `
-                        <li style="font-size: 13px; color: #7f1d1d; margin-bottom: 6px; line-height: 1.6;">
-                            ${protectionName}${riskNote}
-                        </li>
-                    `;
-                }).join('')}
-            </ul>
+            <ol style="margin: 0; padding-left: 20px; list-style: decimal; list-style-position: outside;">
+    ${data.protections_missing.map(item => {
+        // ✅ ROBUST handling of all formats
+        let protectionName = '';
+        let riskNote = '';
+        
+        if (typeof item === 'object' && item !== null) {
+            protectionName = item.name || JSON.stringify(item);
+            // Don't show generic "See detailed compliance" message
+            if (item.risk && !item.risk.includes('detailed compliance')) {
+                riskNote = `<br><span style="color: #dc2626; font-size: 12px; font-style: italic;">Risk: ${item.risk}</span>`;
+            }
+        } else if (typeof item === 'string') {
+            protectionName = item;
+        } else {
+            protectionName = String(item);
+        }
+        
+        return `
+            <li style="font-size: 13px; color: #7f1d1d; margin-bottom: 8px; line-height: 1.6;">
+                ${protectionName}${riskNote}
+            </li>
+        `;
+    }).join('')}
+</ol>
         </div>
     ` : `
         <div style="padding: 12px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981; margin-top: 16px;">
