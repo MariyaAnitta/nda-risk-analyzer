@@ -777,18 +777,31 @@ syncDefaultCriteriaInput();
     console.log("=== DEBUG: hidden_risks_detected ===");
     console.log(data.hidden_risks_detected);
     console.log("Length:", data.hidden_risks_detected ? data.hidden_risks_detected.length : "undefined");
+    
+    console.log("=== CRITERIA DEBUG ===");
+    console.log("metadata.total_criteria_count:", data.metadata?.total_criteria_count);
+    console.log("metadata.criteria.length:", data.metadata?.criteria?.length);
+    console.log("protections_found.length:", data.protections_found?.length);
+    console.log("protections_missing.length:", data.protections_missing?.length);
+    console.log("protections_missing array:", data.protections_missing);
+
+
 
     // Extract risk data
     const riskData = data.risk_assessment || {};
     const riskScore = riskData.risk_score || riskData.risk_percentage || 0;
     const riskLevel = riskData.risk_level || 'MODERATE';
     
-    const totalCriteria = data.metadata && data.metadata.total_criteria_count 
-        ? data.metadata.total_criteria_count  // ← USE THIS FIELD
-        : (data.protections_found.length + data.protections_missing.length);
-        
+    // ✅ FIX 2: Correct total criteria calculation with priority fallback
     const protectionsFound = data.protections_found ? data.protections_found.length : 0;
     const protectionsMissing = data.protections_missing ? data.protections_missing.length : 0;
+
+    // Priority: metadata.total_criteria_count > metadata.criteria.length > sum
+    const totalCriteria = (data.metadata && data.metadata.total_criteria_count)
+        ? data.metadata.total_criteria_count
+        : (data.metadata && data.metadata.criteria && data.metadata.criteria.length)
+        ? data.metadata.criteria.length
+        : (protectionsFound + protectionsMissing);
 
     const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 

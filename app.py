@@ -1604,9 +1604,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     company_policy[current_section].append(cleaned)
                     logger.info(f"    → Added: {cleaned[:60]}...")
 
-
-
-        # ============================
+    # ============================
     # PROTECTIONS FOUND + MISSING - IMPROVED PARSING
     # ============================
     protections_found = []
@@ -1685,26 +1683,42 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
         # === PARSE MISSING PROTECTIONS ===
         if in_missing and stripped:
             
-            # ✅ FIX: Match numbered list items properly (1., 2., 3., etc.)
-            if (re.match(r'^\d+\.\s+', stripped) or          # "1. Item" 
-                re.match(r'^[-•*]\s+', stripped) or          # "- Item" or "• Item"
-                stripped.startswith("✗") or 
-                stripped.startswith("NOT FOUND:")):
-
+            # ✅ IMPROVED: Better pattern matching for numbered lists
+            numbered_match = re.match(r'^(\d+)\.\s+(.+)$', stripped)
+            bullet_match = re.match(r'^[-•*]\s+(.+)$', stripped)
+            
+            if numbered_match:
+                # "1. Protection name" format
+                if current_item:
+                    protections_missing.append(current_item)
+                    logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
+                
+                name = numbered_match.group(2).strip()
+                current_item = {"name": name, "risk": None}
+                logger.info(f"    → Extracted missing protection #{numbered_match.group(1)}: {name[:50]}")
+                
+            elif bullet_match:
+                # "- Protection name" or "• Protection name" format
+                if current_item:
+                    protections_missing.append(current_item)
+                    logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
+                
+                name = bullet_match.group(1).strip()
+                current_item = {"name": name, "risk": None}
+                logger.info(f"    → Extracted missing protection: {name[:50]}")
+                
+            elif stripped.startswith("✗") or stripped.startswith("NOT FOUND:"):
+                # "✗ Protection" or "NOT FOUND: Protection" format
                 if current_item:
                     protections_missing.append(current_item)
                     logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
 
-                # ✅ FIX: Remove all prefixes properly
-                name = re.sub(r'^[\d\.\s]+', '', stripped)  # Remove "1. " or "2. "
-                name = re.sub(r'^[-•*✗\s]+|^NOT FOUND:\s*', '', name).strip()
-                
-                if name:  # Only create item if name is non-empty
+                name = re.sub(r'^[✗\s]+|^NOT FOUND:\s*', "", stripped).strip()
+                if name:
                     current_item = {"name": name, "risk": None}
                     logger.info(f"    → Extracted missing protection: {name[:50]}")
-                else:
-                    logger.warning(f"    ⚠️ Empty name after stripping: {stripped}")
 
+            # Risk line (optional sub-field)
             elif current_item and "Risk:" in stripped:
                 current_item["risk"] = stripped.split("Risk:", 1)[1].strip()
                 logger.info(f"    → Added risk: {current_item['risk'][:50]}")
@@ -1730,7 +1744,9 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
     logger.info(f"✅ Final: {len(protections_found)} found, {len(protections_missing)} missing")
 
-         # ============================
+
+    
+    # ============================
     # COUNTER PROPOSALS - FIXED PARSING
     # ============================
     counter_proposals = []
