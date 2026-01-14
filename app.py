@@ -1615,7 +1615,8 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
     # First, extract the counts from the report
     found_count = 0
     missing_count = 0
-    total_count = len(criteria) 
+    total_count = len(criteria)  # ✅ USE ACTUAL CRITERIA COUNT
+
     for line in lines:
         if "Protections Found:" in line and "out of" in line:
             match = re.search(r'(\d+)\s+out of\s+(\d+)', line)
@@ -1664,7 +1665,6 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
 
         # === PARSE FOUND PROTECTIONS ===
         if in_found and stripped:
-            # New protection item (starts with number, checkmark, or "FOUND:")
             if (re.match(r'^\d+\.', stripped) or 
                 stripped.startswith("✓") or 
                 stripped.startswith("FOUND:")):
@@ -1673,24 +1673,21 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     protections_found.append(current_item)
                     logger.info(f"  Saved found protection: {current_item['name'][:50]}")
 
-                # Extract name
                 name = re.sub(r'^[\d\.\s✓]+|^FOUND:\s*', "", stripped)
                 current_item = {"name": name, "clause": None, "evidence": None}
 
-            # Clause line
             elif current_item and "Clause:" in stripped:
                 current_item["clause"] = stripped.split("Clause:", 1)[1].strip()
 
-            # Evidence line
             elif current_item and "Evidence:" in stripped:
                 current_item["evidence"] = stripped.split("Evidence:", 1)[1].strip()
 
         # === PARSE MISSING PROTECTIONS ===
         if in_missing and stripped:
             
-            # Match: numbered list (1., 2., etc), bullet points (-, •, *), or checkmarks (✗)
-            if (re.match(r'^[-•\*]\s+', stripped) or          # "- Item" or "• Item" or "* Item"
-                re.match(r'^\d+\.\s+', stripped) or           # "1. Item" (note the \s+ for space after dot)
+            # ✅ FIX: Match numbered list items properly (1., 2., 3., etc.)
+            if (re.match(r'^\d+\.\s+', stripped) or          # "1. Item" 
+                re.match(r'^[-•*]\s+', stripped) or          # "- Item" or "• Item"
                 stripped.startswith("✗") or 
                 stripped.startswith("NOT FOUND:")):
 
@@ -1698,16 +1695,16 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                     protections_missing.append(current_item)
                     logger.info(f"  Saved missing protection: {current_item['name'][:50]}")
 
-                # Extract name - remove all prefixes (numbers, bullets, etc)
-                name = re.sub(r'^[-•\*\d\.\s✗]+|^NOT FOUND:\s*', "", stripped).strip()
+                # ✅ FIX: Remove all prefixes properly
+                name = re.sub(r'^[\d\.\s]+', '', stripped)  # Remove "1. " or "2. "
+                name = re.sub(r'^[-•*✗\s]+|^NOT FOUND:\s*', '', name).strip()
                 
-                if name:  # ✅ Only create item if name is non-empty
+                if name:  # Only create item if name is non-empty
                     current_item = {"name": name, "risk": None}
                     logger.info(f"    → Extracted missing protection: {name[:50]}")
                 else:
                     logger.warning(f"    ⚠️ Empty name after stripping: {stripped}")
 
-            # Risk line (optional sub-field)
             elif current_item and "Risk:" in stripped:
                 current_item["risk"] = stripped.split("Risk:", 1)[1].strip()
                 logger.info(f"    → Added risk: {current_item['risk'][:50]}")
@@ -1722,6 +1719,7 @@ def parse_report_to_json(text_report: str, document_path: str, criteria: list,
                 "evidence": None
             })
 
+    # ✅ FIX: If parsing failed, create generic missing protection entries
     if len(protections_missing) == 0 and missing_count > 0:
         logger.warning(f"⚠️ Parsing failed - using count-based fallback for {missing_count} missing protections")
         for i in range(missing_count):
