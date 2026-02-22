@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_vertexai import ChatVertexAI
 from langchain_openai import ChatOpenAI
 import PyPDF2
 from docx import Document as DocxDocument
@@ -57,40 +58,48 @@ app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'docx', 'txt'}
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-#GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-'''GROQ_API_KEY = os.getenv("GROQ_API_KEY")'''
-"""if not GEMINI_KEY:
-    print(" ERROR: Missing GEMINI_API_KEY in .env")
-    sys.exit(1)
-try:
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
-        google_api_key=GEMINI_KEY,
-        temperature=0.0,
-        max_output_tokens=50000,
-        request_timeout=180
-    )
-except Exception as e:
-    print(f" LLM Initialization Failed: {e}")
-    sys.exit(1)"""
+# Vertex AI Configuration
+VERTEX_USE = os.getenv("VITE_GOOGLE_GENAI_USE_VERTEXAI", "false").lower() == "true"
+GCP_PROJECT = os.getenv("VITE_GOOGLE_CLOUD_PROJECT")
+GCP_LOCATION = os.getenv("VITE_GOOGLE_CLOUD_LOCATION", "us-east1")
+GCP_MODEL = os.getenv("VITE_MODEL", "gemini-2.0-flash")
+
+# Handle Google Application Credentials
+creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if creds_path:
+    # If the path doesn't exist locally but we are on Render, 
+    # the user should have uploaded it as a Secret File.
+    # We ensure the environment variable is set for the SDK.
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+    print(f"✅ Using credentials from: {creds_path}")
 
 try:
-    llm = ChatOpenAI(
-        model="meta-llama/llama-3-70b-instruct",
-        api_key=OPENROUTER_API_KEY,  # Correct parameter
-        base_url="https://openrouter.ai/api/v1",  # Correct parameter (not openai_api_base)
-        temperature=0.0,
-        max_tokens=50000,
-        timeout=180,
-        default_headers={  #  CORRECT placement
-            "HTTP-Referer": "http://localhost:5000",
-            "X-Title": "NDA Risk Analyzer"
-        }
-    )
-    print(" LLM initialized successfully with OpenRouter")
+    if VERTEX_USE:
+        llm = ChatVertexAI(
+            model=GCP_MODEL,
+            project=GCP_PROJECT,
+            location=GCP_LOCATION,
+            temperature=float(os.getenv("VITE_TEMPERATURE", "0.0")),
+            max_output_tokens=50000,
+            timeout=180
+        )
+        print(f" ✅ LLM initialized successfully with Vertex AI: {GCP_MODEL}")
+    else:
+        llm = ChatOpenAI(
+            model="meta-llama/llama-3-70b-instruct",
+            api_key=OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1",
+            temperature=0.0,
+            max_tokens=50000,
+            timeout=180,
+            default_headers={
+                "HTTP-Referer": "http://localhost:5000",
+                "X-Title": "NDA Risk Analyzer"
+            }
+        )
+        print(" ✅ LLM initialized successfully with OpenRouter")
 except Exception as e:
-    print(f" LLM Initialization Failed: {e}")
+    print(f" ❌ LLM Initialization Failed: {e}")
     sys.exit(1)
 """try:
     llm = ChatOpenAI(
