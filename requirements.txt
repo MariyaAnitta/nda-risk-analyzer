@@ -1,6 +1,8 @@
+# Install first - required by crewai for pkg_resources
+setuptools>=68.0.0
+
 # CrewAI and Agent Framework
-#crewai==0.30.10
-crewai
+crewai==0.28.8
 flask-cors
 
 crewai-tools==0.1.6
@@ -31,5 +33,4 @@ gunicorn==21.2.0
 python-dotenv==1.0.0
 pydantic==2.11.7
 jsonschema==4.20.0
-setuptools
 
