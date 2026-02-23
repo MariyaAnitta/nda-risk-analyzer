@@ -1,5 +1,19 @@
 import os
 import sys
+
+# === COMPATIBILITY HACK FOR CREWAI ===
+# Fixes 'No module named pkg_resources' on Render's minimal environment
+try:
+    import pkg_resources
+except ImportError:
+    try:
+        import setuptools
+        import pkg_resources
+    except ImportError:
+        from unittest.mock import MagicMock
+        sys.modules['pkg_resources'] = MagicMock()
+# =====================================
+
 from flask_cors import CORS
 import json
 import re
