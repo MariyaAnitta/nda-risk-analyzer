@@ -1,17 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Legal Risk Analyzer</title>
     <style>
         /* ----------------- Reset & base ----------------- */
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { 
-            min-height: 100%; 
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
         }
+
+        html,
+        body {
+            min-height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, Arial;
             background: #f5f7fa;
@@ -23,102 +31,106 @@
             display: flex;
             flex-direction: column;
         }
+
         /* ---------- Results area ---------- */
-.results-header {
-    background: white;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 20px 40px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+        .results-header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-.results-header-left h3 {
-    font-size: 18px;
-    font-weight: 600;
-    color: #0f1724;
-    margin-bottom: 4px;
-}
+        .results-header-left h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f1724;
+            margin-bottom: 4px;
+        }
 
-.results-header-left p {
-    font-size: 13px;
-    color: #64748b;
-}
+        .results-header-left p {
+            font-size: 13px;
+            color: #64748b;
+        }
 
-.back-btn, .export-btn {
-    padding: 10px 20px;
-    background: white;
-    border: 1px solid #cbd5e0;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #475569;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.2s;
-}
+        .back-btn,
+        .export-btn {
+            padding: 10px 20px;
+            background: white;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #475569;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
 
-.back-btn:hover, .export-btn:hover {
-    background: #f7fafc;
-    border-color: #a0aec0;
-}
+        .back-btn:hover,
+        .export-btn:hover {
+            background: #f7fafc;
+            border-color: #a0aec0;
+        }
 
-/* ---------- Loader ---------- */
-.loader {
-    display: none;
-    text-align: center;
-    padding: 60px 20px;
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #e6eef6;
-    margin-top: 30px;
-}
+        /* ---------- Loader ---------- */
+        .loader {
+            display: none;
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e6eef6;
+            margin-top: 30px;
+        }
 
-.loader.active {
-    display: block;
-}
+        .loader.active {
+            display: block;
+        }
 
-.spinner {
-    border: 3px solid #f3f4f6;
-    border-top: 3px solid #0f1724;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    animation: spin 0.8s linear infinite;
-    margin: 0 auto 20px;
-}
+        .spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #0f1724;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px;
+        }
 
-.loader-text {
-    font-size: 14px;
-    color: #2b3b4a;
-    font-weight: 500;
-    margin-bottom: 8px;
-}
+        .loader-text {
+            font-size: 14px;
+            color: #2b3b4a;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
 
-.loader-subtext {
-    font-size: 13px;
-    color: #64748b;
-}
+        .loader-subtext {
+            font-size: 13px;
+            color: #64748b;
+        }
 
-/* ---------- Error message ---------- */
-.error-message {
-    background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #991b1b;
-    padding: 16px 20px;
-    border-radius: 8px;
-    margin: 20px 0;
-    font-size: 14px;
-    display: none;
-}
+        /* ---------- Error message ---------- */
+        .error-message {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            display: none;
+        }
 
-.error-message.active {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
+        .error-message.active {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
         /* ---------- Header ---------- */
         .header {
             background: white;
@@ -126,140 +138,433 @@
             padding: 20px 40px;
             box-shadow: 0 1px 3px rgba(13, 20, 25, 0.04);
         }
+
         .header-content {
             max-width: 1400px;
             margin: 0 auto;
-            display:flex;
-            align-items:center;
-            gap:14px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
         }
+
         .logo {
-            width:44px;height:44px;border-radius:10px;
-            background:#0f1724;color:white;
-            display:flex;align-items:center;justify-content:center;
-            font-weight:700;font-size:16px;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: #0f1724;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
         }
-        .header-title h1 { font-size:18px; font-weight:600; color:#0f1724; }
-        .header-title p { font-size:13px; color:#64748b; margin-top:2px; }
+
+        .header-title h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f1724;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 2px;
+        }
 
         /* ---------- Container ---------- */
         .container {
-            max-width:1400px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding:40px;
+            padding: 40px;
         }
 
-        .page-title h2 { font-size:26px; font-weight:700; color:#0f1724; margin-bottom:6px; }
-        .page-subtitle { color:#64748b; margin-bottom:24px; font-size:14px; }
+        .page-title h2 {
+            font-size: 26px;
+            font-weight: 700;
+            color: #0f1724;
+            margin-bottom: 6px;
+        }
+
+        .page-subtitle {
+            color: #64748b;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
 
         /* ---------- Grid ---------- */
         .upload-grid {
-            display:grid;
+            display: grid;
             grid-template-columns: 1fr 1fr;
-            gap:28px;
-            margin-bottom:30px;
+            gap: 28px;
+            margin-bottom: 30px;
         }
 
         .card {
-            background:white;
-            border-radius:12px;
-            border:1px solid #e6eef6;
-            padding:28px;
-            box-shadow: 0 1px 3px rgba(13,20,25,0.03);
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e6eef6;
+            padding: 28px;
+            box-shadow: 0 1px 3px rgba(13, 20, 25, 0.03);
         }
 
-        .card-title { display:flex; align-items:center; gap:10px; font-weight:600; color:#0f1724; margin-bottom:6px; font-size:15px; }
-        .card-subtitle { font-size:13px; color:#64748b; margin-bottom:12px; }
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            color: #0f1724;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+
+        .card-subtitle {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
 
         /* ---------- Drop zone ---------- */
         .drop-zone {
-            border:2px dashed #d3dce7;
-            border-radius:10px;
-            padding:56px 20px;
-            text-align:center;
-            cursor:pointer;
-            background:#fbfdff;
+            border: 2px dashed #d3dce7;
+            border-radius: 10px;
+            padding: 56px 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #fbfdff;
             transition: all .15s ease;
         }
-        .drop-zone:hover { border-color:#94b6e6; background:#f7fbff; }
-        .drop-zone.drag-over { border-color:#2b8de6; background:#ebf6ff; }
-        .upload-icon { width:48px;height:48px;margin:0 auto 14px;color:#9aa7b8; }
-        .drop-zone-text { font-size:15px; color:#2b3b4a; margin-bottom:6px; }
-        .drop-zone-subtext { font-size:13px; color:#6b7b88; }
 
-        .file-selected { margin-top:14px; display:none; background:#f0fdf4; border:1px solid #86efac; color:#166534; padding:10px 12px; border-radius:8px; font-size:13px; }
+        .drop-zone:hover {
+            border-color: #94b6e6;
+            background: #f7fbff;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #2b8de6;
+            background: #ebf6ff;
+        }
+
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 14px;
+            color: #9aa7b8;
+        }
+
+        .drop-zone-text {
+            font-size: 15px;
+            color: #2b3b4a;
+            margin-bottom: 6px;
+        }
+
+        .drop-zone-subtext {
+            font-size: 13px;
+            color: #6b7b88;
+        }
+
+        .file-selected {
+            margin-top: 14px;
+            display: none;
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            color: #166534;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
 
         /* ---------- Form controls ---------- */
-        .form-group { margin-bottom:18px; }
-        label { display:block; font-weight:600; color:#0f1724; margin-bottom:8px; font-size:14px; }
-        select, textarea, input[type="text"] {
-            width:100%;
-            padding:12px 14px;
-            border-radius:8px;
-            border:1px solid #e6eef6;
-            background:#fbfdff;
-            font-size:14px;
-            font-family:inherit;
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #0f1724;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        select,
+        textarea,
+        input[type="text"] {
+            width: 100%;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #e6eef6;
+            background: #fbfdff;
+            font-size: 14px;
+            font-family: inherit;
             transition: all .12s ease;
         }
-        select:focus, textarea:focus, input[type="text"]:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 6px rgba(59,130,246,0.06); background:#fff; }
 
-        .criteria-textarea { min-height:160px; resize:vertical; }
+        select:focus,
+        textarea:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 6px rgba(59, 130, 246, 0.06);
+            background: #fff;
+        }
 
-        .criteria-helper { margin-top:10px; font-size:13px; color:#64748b; display:flex; justify-content:space-between; align-items:center; gap:12px; }
+        .criteria-textarea {
+            min-height: 160px;
+            resize: vertical;
+        }
+
+        .criteria-helper {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #64748b;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
 
         /* ---------- Predefined criteria dropdown area ---------- */
-        .predefined-criteria { margin-top:18px; padding-top:12px; border-top:1px solid #eef5fb; }
-        .predefined-criteria-header { font-size:13px; color:#64748b; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
-        .criteria-dropdown {
-            padding:12px;border-radius:8px;border:1px solid #e6eef6;background:#f6fbff; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+        .predefined-criteria {
+            margin-top: 18px;
+            padding-top: 12px;
+            border-top: 1px solid #eef5fb;
         }
-        .criteria-options { margin-top:8px; background:white; border-radius:8px; border:1px solid #e6eef6; max-height:260px; overflow:auto; display:none; }
-        .criteria-options.active { display:block; }
-        .criteria-option { padding:10px 12px; border-bottom:1px solid #f3f7fb; display:flex; align-items:center; gap:10px; font-size:14px; cursor:pointer; }
-        .criteria-option:last-child { border-bottom:none; }
-        .criteria-option.selected { background:#4f46e5; color:white; }
-        .criteria-option .opt-label { flex:1; }
-        .selected-count { display:inline-block; margin-left:8px; padding:3px 9px; background:#4f46e5; color:white; border-radius:12px; font-size:12px; font-weight:700; }
+
+        .predefined-criteria-header {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .criteria-dropdown {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e6eef6;
+            background: #f6fbff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .criteria-options {
+            margin-top: 8px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e6eef6;
+            max-height: 260px;
+            overflow: auto;
+            display: none;
+        }
+
+        .criteria-options.active {
+            display: block;
+        }
+
+        .criteria-option {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f3f7fb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .criteria-option:last-child {
+            border-bottom: none;
+        }
+
+        .criteria-option.selected {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .criteria-option .opt-label {
+            flex: 1;
+        }
+
+        .selected-count {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 3px 9px;
+            background: #4f46e5;
+            color: white;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
 
         /* Select all option styling */
-        .select-all-option { font-weight:700; border-bottom:1px solid #e6eef6; background:#f8fbff; }
+        .select-all-option {
+            font-weight: 700;
+            border-bottom: 1px solid #e6eef6;
+            background: #f8fbff;
+        }
 
         /* ---------- Analyze button ---------- */
-        .analyze-btn { margin-top:10px; width:100%; padding:14px; border-radius:10px; border:none; background:#0f1724; color:white; font-weight:700; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:10px; }
-        .analyze-btn:disabled { background:#cbd5e0; cursor:not-allowed; }
+        .analyze-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: none;
+            background: #0f1724;
+            color: white;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .analyze-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
 
         /* ---------- Process steps ---------- */
-        .process-steps { margin-top:36px; display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
-        .step { text-align:center; }
-        .step-number { width:40px;height:40px;border-radius:50%; background:#f1f5f9; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#475569; margin-bottom:10px; }
-        .step-title { font-weight:700; color:#0f1724; margin-bottom:6px; }
-        .step-desc { color:#64748b; font-size:13px; }
+        .process-steps {
+            margin-top: 36px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+        }
+
+        .step {
+            text-align: center;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f1f5f9;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: #475569;
+            margin-bottom: 10px;
+        }
+
+        .step-title {
+            font-weight: 700;
+            color: #0f1724;
+            margin-bottom: 6px;
+        }
+
+        .step-desc {
+            color: #64748b;
+            font-size: 13px;
+        }
 
         /* ---------- Modal (for editing 10 default criteria) ---------- */
-        .modal-backdrop { position:fixed; inset:0; background:rgba(2,6,23,0.45); display:flex; align-items:center; justify-content:center; z-index:9999; }
-        .modal { width:760px; max-width:95%; background:white; border-radius:12px; padding:20px; box-shadow:0 10px 40px rgba(2,6,23,0.25); }
-        .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-        .modal-title { font-weight:700; color:#0f1724; font-size:16px; }
-        .modal-body { max-height:420px; overflow:auto; padding-right:6px; }
-        .criteria-row { display:flex; gap:8px; align-items:center; margin-bottom:8px; }
-        .criteria-row input[type="text"] { flex:1; padding:10px; border:1px solid #e6eef6; border-radius:8px; font-size:14px; }
-        .criteria-row .row-actions { display:flex; gap:8px; }
-        .btn { padding:8px 12px; border-radius:8px; border:1px solid #e6eef6; cursor:pointer; background:white; }
-        .btn.primary { background:#0f1724; color:white; border-color:#0f1724; }
-        .btn.ghost { background:white; color:#0f1724; }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .modal {
+            width: 760px;
+            max-width: 95%;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(2, 6, 23, 0.25);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .modal-title {
+            font-weight: 700;
+            color: #0f1724;
+            font-size: 16px;
+        }
+
+        .modal-body {
+            max-height: 420px;
+            overflow: auto;
+            padding-right: 6px;
+        }
+
+        .criteria-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .criteria-row input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #e6eef6;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .criteria-row .row-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid #e6eef6;
+            cursor: pointer;
+            background: white;
+        }
+
+        .btn.primary {
+            background: #0f1724;
+            color: white;
+            border-color: #0f1724;
+        }
+
+        .btn.ghost {
+            background: white;
+            color: #0f1724;
+        }
 
         /* ---------- Results area kept as-is placeholder (real content from fakeindex.html injected below) ---------- */
-        .results-section { display:none; }
-        .results-section.active { display:block; }
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
 
         /* ---------- small screens ---------- */
         @media (max-width: 1024px) {
-            .upload-grid { grid-template-columns: 1fr; }
-            .process-steps { grid-template-columns: repeat(2,1fr); }
+            .upload-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .process-steps {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>
+
 <body>
     <!-- Header -->
     <div class="header">
@@ -278,7 +583,8 @@
             <div class="page-title">
                 <h2>NDA Risk Assessment</h2>
             </div>
-            <p class="page-subtitle">Upload your NDA document and let our AI identify risks, missing protections, and generate counter-proposals.</p>
+            <p class="page-subtitle">Upload your NDA document and let our AI identify risks, missing protections, and
+                generate counter-proposals.</p>
 
             <form id="analyzeForm">
                 <div class="upload-grid">
@@ -287,7 +593,11 @@
                     <div class="card">
                         <div class="card-header">
                             <div class="card-title">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path
+                                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                                        stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
                                 Upload NDA Document
                             </div>
                             <p class="card-subtitle">Upload your NDA for comprehensive risk analysis</p>
@@ -295,11 +605,13 @@
 
                         <div class="drop-zone" id="dropZone" title="Click to upload">
                             <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
                             <div class="drop-zone-text">Drop your file here or click to browse</div>
                             <div class="drop-zone-subtext">PDF, DOCX, or TXT (up to 20MB)</div>
-                            <input type="file" id="fileInput" class="file-input" name="document" accept=".pdf,.docx,.txt" />
+                            <input type="file" id="fileInput" class="file-input" name="document"
+                                accept=".pdf,.docx,.txt" />
                         </div>
                         <div id="fileName" class="file-selected"></div>
                     </div>
@@ -307,59 +619,61 @@
                     <div class="card">
                         <div class="card-header">
                             <div class="card-title">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/></svg>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+                                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" />
+                                </svg>
                                 Risk Assessment Criteria
                             </div>
                             <p class="card-subtitle">Configure the criteria used to analyze your NDA</p>
                         </div>
 
-                    
+
 
                         <!-- NEW DEFAULT CRITERIA BLUE BLOCK -->
-<div style="margin-bottom:16px;">
-    <button id="previewDefaultBtn" type="button" class="btn" 
-        style="width:100%; display:flex; align-items:center; gap:8px; 
+                        <div style="margin-bottom:16px;">
+                            <button id="previewDefaultBtn" type="button" class="btn" style="width:100%; display:flex; align-items:center; gap:8px; 
                border-radius:8px; background:#e6f0ff; border:1px solid #cfe2ff; padding:14px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#075985">
-            <path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7
-                     -1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-            <circle cx="12" cy="12" r="3" stroke-width="1.2"/>
-        </svg>
-        <strong id="defaultCriteriaLabel" style="color:#075985;">
-            10 Industry-Standard NDA Criteria Applied Automatically
-        </strong>
-    </button>
-    <p style="margin-top:6px; font-size:13px; color:#6b7280;">
-        These criteria are automatically applied. Click to preview or modify.
-    </p>
-</div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#075985">
+                                    <path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7
+                     -1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    <circle cx="12" cy="12" r="3" stroke-width="1.2" />
+                                </svg>
+                                <strong id="defaultCriteriaLabel" style="color:#075985;">
+                                    10 Industry-Standard NDA Criteria Applied Automatically
+                                </strong>
+                            </button>
+                            <p style="margin-top:6px; font-size:13px; color:#6b7280;">
+                                These criteria are automatically applied. Click to preview or modify.
+                            </p>
+                        </div>
 
-<!-- Additional Custom Criteria textarea -->
-<div style="margin-bottom:12px;">
-    <label for="criteria">Additional Custom Criteria (Optional)</label>
-    <textarea id="criteria" class="criteria-textarea"
-              placeholder="Add your own criteria, one per line..."></textarea>
-    <span id="charCount" style="font-size:12px; color:#6b7280;">0 characters</span>
-</div>
+                        <!-- Additional Custom Criteria textarea -->
+                        <div style="margin-bottom:12px;">
+                            <label for="criteria">Additional Custom Criteria (Optional)</label>
+                            <textarea id="criteria" class="criteria-textarea"
+                                placeholder="Add your own criteria, one per line..."></textarea>
+                            <span id="charCount" style="font-size:12px; color:#6b7280;">0 characters</span>
+                        </div>
 
 
                         <!-- PREDEFINED (8 NDA items) - Dropdown -->
-                      <div class="predefined-criteria">
-    <div class="predefined-criteria-header">
-        <div>Add Predefined Criteria Set</div>
-        <div><span id="selectedCount" class="selected-count" style="display:none;">0</span></div>
-    </div>
+                        <div class="predefined-criteria">
+                            <div class="predefined-criteria-header">
+                                <div>Add Predefined Criteria Set</div>
+                                <div><span id="selectedCount" class="selected-count" style="display:none;">0</span>
+                                </div>
+                            </div>
 
-    <div id="criteriaDropdown" class="criteria-dropdown">
-        <span id="criteriaDropdownLabel">Select criteria...</span>
-        <span style="opacity:0.7;">▼</span>
-    </div>
+                            <div id="criteriaDropdown" class="criteria-dropdown">
+                                <span id="criteriaDropdownLabel">Select criteria...</span>
+                                <span style="opacity:0.7;">▼</span>
+                            </div>
 
-    <div id="criteriaOptions" class="criteria-options" aria-hidden="true">
-        <!-- JS fills NDA criteria only -->
-    </div>
-</div>
+                            <div id="criteriaOptions" class="criteria-options" aria-hidden="true">
+                                <!-- JS fills NDA criteria only -->
+                            </div>
+                        </div>
 
                         <!-- Hidden input to hold default criteria (10) separately -->
                         <input type="hidden" id="defaultCriteriaInput" name="default_criteria" value="" />
@@ -368,7 +682,9 @@
 
                 <!-- Analyze -->
                 <button type="submit" id="analyzeBtn" class="analyze-btn">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
                     Analyze Document
                 </button>
             </form>
@@ -435,15 +751,15 @@
          * DATA
          *******************************/
         const predefinedCriteria = {
-    nda: [
-        "Clear definition of confidential information",
-        "Reasonable time limitations for confidentiality obligations",
-        "Permitted disclosure exceptions (legal, regulatory)",
-        "Return or destruction of confidential materials clause",
-        "No automatic non-compete or non-solicitation obligations",
-        
-    ]
-};
+            nda: [
+                "Clear definition of confidential information",
+                "Reasonable time limitations for confidentiality obligations",
+                "Permitted disclosure exceptions (legal, regulatory)",
+                "Return or destruction of confidential materials clause",
+                "No automatic non-compete or non-solicitation obligations",
+
+            ]
+        };
 
         // Default 10 industry-standard NDA criteria (editable via modal)
         let defaultIndustryCriteria = [
@@ -503,15 +819,16 @@
             charCount.textContent = `${criteriaTextarea.value.length} characters`;
         });
 
-        
+
 
         // Drop zone interactions
         //dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('click', (e) => {e.preventDefault();e.stopPropagation();fileInput.click();
-});
-fileInput.addEventListener("click", (e) => {
-    e.stopPropagation();
-});
+        dropZone.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation(); fileInput.click();
+        });
+        fileInput.addEventListener("click", (e) => {
+            e.stopPropagation();
+        });
         dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
         dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
         dropZone.addEventListener('drop', (e) => {
@@ -535,7 +852,7 @@ fileInput.addEventListener("click", (e) => {
         function showError(message) {
             errorMessage.innerHTML = message;
             errorMessage.style.display = 'flex';
-            setTimeout(()=> errorMessage.style.display = 'none', 5500);
+            setTimeout(() => errorMessage.style.display = 'none', 5500);
         }
 
         /*******************************
@@ -546,11 +863,11 @@ fileInput.addEventListener("click", (e) => {
             criteriaOptions.classList.toggle('active');
         });
         document.addEventListener('click', (e) => {
-    const predefinedSection = document.getElementById('predefinedCriteriaSection');
-    if (predefinedSection && !predefinedSection.contains(e.target)) {
-        criteriaOptions.classList.remove('active');
-    }
-});
+            const predefinedSection = document.getElementById('predefinedCriteriaSection');
+            if (predefinedSection && !predefinedSection.contains(e.target)) {
+                criteriaOptions.classList.remove('active');
+            }
+        });
 
         function populatePredefinedCriteria(category) {
             criteriaOptions.innerHTML = '';
@@ -632,7 +949,7 @@ fileInput.addEventListener("click", (e) => {
         /*******************************
          * Analyze form submission
          *******************************/
-        analyzeForm.addEventListener('submit', async function(e) {
+        analyzeForm.addEventListener('submit', async function (e) {
             e.preventDefault();
             syncDefaultCriteriaInput();
 
@@ -669,17 +986,20 @@ fileInput.addEventListener("click", (e) => {
 
             try {
                 const resp = await fetch('https://nda-risk-analyzer.onrender.com/analyze', { method: 'POST', body: formData });
+
+                if (!resp.ok) {
+                    const errorData = await resp.json().catch(() => ({}));
+                    throw new Error(errorData.error || `Server Error: ${resp.status} ${resp.statusText}`);
+                }
+
                 const data = await resp.json();
-
-                if (!resp.ok) throw new Error(data.error || 'Analysis failed');
-
                 displayResults(data);
                 uploadView.style.display = 'none';
                 resultsSection.classList.add('active');
-                window.scrollTo(0,0);
+                window.scrollTo(0, 0);
             } catch (err) {
-                console.error(err);
-                showError(err.message || 'Analysis failed');
+                console.error("ANALYSIS ERROR:", err);
+                showError(`<strong>Analysis Failed</strong><br>${err.message}<br><small>If this persists, please check if the backend is live.</small>`);
             } finally {
                 analyzeBtn.disabled = false;
                 loader.classList.remove('active');
@@ -754,62 +1074,62 @@ fileInput.addEventListener("click", (e) => {
         }
 
         function saveDefaultModal() {
-    const rows = modalBody.querySelectorAll('.criteria-row');
-    const newList = [];
-    rows.forEach((r) => {
-        const txtInput = r.querySelector('input[type="text"]');
-        const chk = r.querySelector('input[type="checkbox"]');
-        const txt = txtInput ? txtInput.value.trim() : '';
-        if (chk && chk.checked && txt) {
-            newList.push(txt);
-        }
-    });
+            const rows = modalBody.querySelectorAll('.criteria-row');
+            const newList = [];
+            rows.forEach((r) => {
+                const txtInput = r.querySelector('input[type="text"]');
+                const chk = r.querySelector('input[type="checkbox"]');
+                const txt = txtInput ? txtInput.value.trim() : '';
+                if (chk && chk.checked && txt) {
+                    newList.push(txt);
+                }
+            });
 
-    defaultIndustryCriteria = newList.length ? newList : [];
-    syncDefaultCriteriaInput();
-    closeDefaultModal();
+            defaultIndustryCriteria = newList.length ? newList : [];
+            syncDefaultCriteriaInput();
+            closeDefaultModal();
 
-    document.getElementById("defaultCriteriaLabel").textContent =
-    `${defaultIndustryCriteria.length} Industry-Standard NDA Criteria Applied Automatically`; // ← ADD THIS (closing brace, comma, time)
-} // ← ADD THIS (closing brace for function)
+            document.getElementById("defaultCriteriaLabel").textContent =
+                `${defaultIndustryCriteria.length} Industry-Standard NDA Criteria Applied Automatically`; // ← ADD THIS (closing brace, comma, time)
+        } // ← ADD THIS (closing brace for function)
 
-// Keep default criteria input synced on load
-syncDefaultCriteriaInput();
+        // Keep default criteria input synced on load
+        syncDefaultCriteriaInput();
         /*******************************
          * DISPLAY RESULTS (copied from your fakeindex.html)
          * This function builds the entire results page exactly as in fakeindex.html
          *******************************/
-       function displayResults(data) {
-    console.log("=== DEBUG: Full data object ===");
-    console.log(data);
-    console.log("=== DEBUG: hidden_risks_detected ===");
-    console.log(data.hidden_risks_detected);
-    console.log("Length:", data.hidden_risks_detected ? data.hidden_risks_detected.length : "undefined");
+        function displayResults(data) {
+            console.log("=== DEBUG: Full data object ===");
+            console.log(data);
+            console.log("=== DEBUG: hidden_risks_detected ===");
+            console.log(data.hidden_risks_detected);
+            console.log("Length:", data.hidden_risks_detected ? data.hidden_risks_detected.length : "undefined");
 
-    // Extract risk data
-    const riskData = data.risk_assessment || {};
-    const riskScore = riskData.risk_score || riskData.risk_percentage || 0;
-    const riskLevel = riskData.risk_level || 'MODERATE';
-    
-    const totalCriteria = data.metadata && data.metadata.total_criteria_count 
-        ? data.metadata.total_criteria_count  // ← USE THIS FIELD
-        : (data.protections_found.length + data.protections_missing.length);
-        
-    const protectionsFound = data.protections_found ? data.protections_found.length : 0;
-    const protectionsMissing = data.protections_missing ? data.protections_missing.length : 0;
+            // Extract risk data
+            const riskData = data.risk_assessment || {};
+            const riskScore = riskData.risk_score || riskData.risk_percentage || 0;
+            const riskLevel = riskData.risk_level || 'MODERATE';
 
-    const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const totalCriteria = data.metadata && data.metadata.total_criteria_count
+                ? data.metadata.total_criteria_count  // ← USE THIS FIELD
+                : (data.protections_found.length + data.protections_missing.length);
 
-    // Risk level styling
-    const riskColor = riskLevel.includes('HIGH') ? '#dc2626' : riskLevel.includes('MODERATE') ? '#f59e0b' : '#10b981';
-    const riskBg = riskLevel.includes('HIGH') ? '#fef2f2' : riskLevel.includes('MODERATE') ? '#fef3c7' : '#f0fdf4';
+            const protectionsFound = data.protections_found ? data.protections_found.length : 0;
+            const protectionsMissing = data.protections_missing ? data.protections_missing.length : 0;
 
-    // Safe helper function to check for [Not Specified]
-    const isNotSpecified = (value) => {
-        return !value || value === '[Not Specified]' || (typeof value === 'string' && value.includes('[Not Specified]'));
-    };
+            const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    let html = `
+            // Risk level styling
+            const riskColor = riskLevel.includes('HIGH') ? '#dc2626' : riskLevel.includes('MODERATE') ? '#f59e0b' : '#10b981';
+            const riskBg = riskLevel.includes('HIGH') ? '#fef2f2' : riskLevel.includes('MODERATE') ? '#fef3c7' : '#f0fdf4';
+
+            // Safe helper function to check for [Not Specified]
+            const isNotSpecified = (value) => {
+                return !value || value === '[Not Specified]' || (typeof value === 'string' && value.includes('[Not Specified]'));
+            };
+
+            let html = `
         <div class="results-header">
             <div class="results-header-left">
                 <h3>Risk Assessment Report</h3>
@@ -892,15 +1212,15 @@ ${(data.hidden_risks_detected && Array.isArray(data.hidden_risks_detected) && da
     <!-- Display each hidden risk -->
     <div style="display: grid; gap: 16px;">
         ${data.hidden_risks_detected.map((risk, index) => {
-            const severityColor = risk.severity === 'CRITICAL' ? '#dc2626' : 
-                                 risk.severity === 'HIGH' ? '#ea580c' : 
-                                 risk.severity === 'MEDIUM' ? '#f59e0b' : '#3b82f6';
-            
-            const severityBg = risk.severity === 'CRITICAL' ? '#fef2f2' : 
-                              risk.severity === 'HIGH' ? '#fff7ed' : 
-                              risk.severity === 'MEDIUM' ? '#fef3c7' : '#eff6ff';
-            
-            return `
+                const severityColor = risk.severity === 'CRITICAL' ? '#dc2626' :
+                    risk.severity === 'HIGH' ? '#ea580c' :
+                        risk.severity === 'MEDIUM' ? '#f59e0b' : '#3b82f6';
+
+                const severityBg = risk.severity === 'CRITICAL' ? '#fef2f2' :
+                    risk.severity === 'HIGH' ? '#fff7ed' :
+                        risk.severity === 'MEDIUM' ? '#fef3c7' : '#eff6ff';
+
+                return `
             <div style="background: white; border: 1px solid #f3e0b8; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                 
                 <!-- Header with trap name and severity -->
@@ -941,7 +1261,7 @@ ${(data.hidden_risks_detected && Array.isArray(data.hidden_risks_detected) && da
 
             </div>
             `;
-        }).join('')}
+            }).join('')}
     </div>
 
     <!-- Summary footer -->
@@ -990,20 +1310,20 @@ ${data.counter_proposals && data.counter_proposals.length > 0 ? `
     <div style="display: grid; gap: 16px;">
         ${data.counter_proposals.map((proposal, index) => {
 
-            const priority = (proposal.priority || 'MEDIUM').toUpperCase();
+                const priority = (proposal.priority || 'MEDIUM').toUpperCase();
 
-            let priorityBadge;
-            if (priority === 'BLOCKING') {
-                priorityBadge = '<span style="padding: 6px 14px; background: #7f1d1d; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">🚫 BLOCKING</span>';
-            } else if (priority === 'HIGH') {
-                priorityBadge = '<span style="padding: 6px 14px; background: #dc2626; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">HIGH Priority</span>';
-            } else if (priority === 'MEDIUM') {
-                priorityBadge = '<span style="padding: 6px 14px; background: #f59e0b; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">MEDIUM Priority</span>';
-            } else {
-                priorityBadge = '<span style="padding: 6px 14px; background: #3b82f6; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">LOW Priority</span>';
-            }
+                let priorityBadge;
+                if (priority === 'BLOCKING') {
+                    priorityBadge = '<span style="padding: 6px 14px; background: #7f1d1d; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">🚫 BLOCKING</span>';
+                } else if (priority === 'HIGH') {
+                    priorityBadge = '<span style="padding: 6px 14px; background: #dc2626; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">HIGH Priority</span>';
+                } else if (priority === 'MEDIUM') {
+                    priorityBadge = '<span style="padding: 6px 14px; background: #f59e0b; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">MEDIUM Priority</span>';
+                } else {
+                    priorityBadge = '<span style="padding: 6px 14px; background: #3b82f6; color: white; border-radius: 6px; font-size: 12px; font-weight: 600;">LOW Priority</span>';
+                }
 
-            return `
+                return `
             <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
 
                 <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
@@ -1038,11 +1358,11 @@ ${data.counter_proposals && data.counter_proposals.length > 0 ? `
                 ` : ''}
 
                 <button onclick="copyToClipboard(\`${proposal.suggested_clause
-                    .replace(/`/g, '\\`')
-                    .replace(/\$/g, '\\$')
-                    .replace(/"/g, '&quot;')
-                    .replace(/\n/g, ' ')
-                }\`, this)"
+                            .replace(/`/g, '\\`')
+                            .replace(/\$/g, '\\$')
+                            .replace(/"/g, '&quot;')
+                            .replace(/\n/g, ' ')
+                        }\`, this)"
                 style="padding: 10px 18px; background: white; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;">
                     Copy Text
                 </button>
@@ -1056,14 +1376,14 @@ ${data.counter_proposals && data.counter_proposals.length > 0 ? `
                 `}
             </div>
             `;
-        }).join('')}
+            }).join('')}
     </div>
 
 </div>
 ` : ''}
 
 `;
-html += `
+            html += `
 
             <!-- 4. Vendor & Jurisdiction Intelligence + Universal Criteria Grid -->
             ${data.jurisdiction_intelligence ? `
@@ -1118,14 +1438,13 @@ html += `
 
         <div style="height: 8px; background: #e2e8f0; border-radius: 999px; width: 60%; margin: 0 auto; overflow: hidden;">
             <div style="height: 100%; background: ${riskColor};
-                        width: ${
-                            ((data.protections_found ? data.protections_found.length : 0) /
-                            (
-                                (data.protections_found ? data.protections_found.length : 0) +
-                                (data.protections_missing ? data.protections_missing.length : 0) ||
-                                1
-                            )) * 100
-                        }%;"></div>
+                        width: ${((data.protections_found ? data.protections_found.length : 0) /
+                        (
+                            (data.protections_found ? data.protections_found.length : 0) +
+                            (data.protections_missing ? data.protections_missing.length : 0) ||
+                            1
+                        )) * 100
+                    }%;"></div>
         </div>
     </div>
 
@@ -1349,7 +1668,7 @@ ${data.company_policy_compliance ? `
             predefinedCriteriaSection.style.display = 'none';
             criteriaOptions.classList.remove('active');
             updateSelectedCount();
-            window.scrollTo(0,0);
+            window.scrollTo(0, 0);
         }
 
         window.newAnalysis = newAnalysis;
@@ -1358,11 +1677,11 @@ ${data.company_policy_compliance ? `
          * This preserves the behavior from your fakeindex.html preview button
          *******************************/
         // Add a safe handler for any preview button (keeps backwards-compatible fetch)
-        (function attachPreviewHandler(){
+        (function attachPreviewHandler() {
             const previewBtn = document.getElementById('previewDefaultBtn');
             if (!previewBtn) return;
 
-            previewBtn.addEventListener('click', async function(){
+            previewBtn.addEventListener('click', async function () {
                 // open modal already handled (we attached openDefaultModal earlier)
                 openDefaultModal();
             });
@@ -1371,7 +1690,7 @@ ${data.company_policy_compliance ? `
         // Optional: fetch preview from server if endpoint exists (kept from original)
         const previewCriteriaButtons = document.querySelectorAll('#previewCriteria');
         previewCriteriaButtons.forEach(btn => {
-            btn && btn.addEventListener('click', async function() {
+            btn && btn.addEventListener('click', async function () {
                 const button = this;
                 button.disabled = true;
                 button.innerHTML = '<svg width="16" height="16" style="animation: spin 1s linear infinite;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#e5e7eb" stroke-width="4" fill="none"></circle></svg> Loading.';
@@ -1379,12 +1698,12 @@ ${data.company_policy_compliance ? `
                     const response = await fetch('/preview-criteria');
                     const data = await response.json();
                     if (data.success && data.criteria) {
-                        const criteriaList = data.criteria.map((c,i) => `${i+1}. ${c}`).join('\n');
+                        const criteriaList = data.criteria.map((c, i) => `${i + 1}. ${c}`).join('\n');
                         alert(`✓… Default NDA Criteria (${data.count} total)\n\n${criteriaList}\n\nThese criteria are automatically applied if you don't provide custom ones.`);
                     } else {
                         alert('✗ Could not load default criteria. Please try again.');
                     }
-                } catch(err) {
+                } catch (err) {
                     alert('✗ Error fetching criteria: ' + (err.message || err));
                 } finally {
                     button.disabled = false;
@@ -1406,4 +1725,5 @@ ${data.company_policy_compliance ? `
 
     </script>
 </body>
+
 </html>

@@ -1,27 +1,13 @@
 import os
 import sys
-
-# === COMPATIBILITY HACK FOR CREWAI ===
-# Fixes 'No module named pkg_resources' on Render's minimal environment
-try:
-    import pkg_resources
-except ImportError:
-    # A more complete mock to satisfy crewai's version check
-    from unittest.mock import MagicMock
-    mock_pkg = MagicMock()
-    mock_dist = MagicMock()
-    mock_dist.version = "0.0.0"
-    mock_pkg.get_distribution.return_value = mock_dist
-    mock_pkg.iter_entry_points.return_value = []
-    sys.modules['pkg_resources'] = mock_pkg
-# =====================================
-
-from flask_cors import CORS
+import logging
 import json
 import re
+from typing import Dict, List, Tuple
 from pathlib import Path
 from datetime import datetime
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, make_response
+from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew
@@ -54,13 +40,24 @@ print(f"✅ Loaded .env from: {dotenv_path}")
 print(f"✅ File exists: {dotenv_path.exists()}")
 
 app = Flask(__name__)
-# The MOST permissive CORS possible to eliminate it as a blocker
-# Strict CORS configuration for Netlify
-CORS(app, resources={r"/*": {"origins": ["https://nda-risk-analyzer.netlify.app", "http://localhost:3000"]}})
+app.url_map.strict_slashes = False
+# Allow Netlify and Localhost
+CORS(app, resources={r"/*": {"origins": ["https://nda-risk-analyzer.netlify.app", "http://localhost:3000", "http://localhost:5010"]}})
+
+@app.before_request
+def log_request():
+    logger.info(f"--- INCOMING REQUEST: {request.method} {request.path} ---")
 
 @app.route('/ping', methods=['GET', 'OPTIONS'])
 def ping():
     return jsonify({"status": "ok", "message": "Pong!"}), 200
+
+@app.errorhandler(404)
+def resource_not_found(e):
+    logger.error(f"!!! 404 ERROR: {request.method} {request.path} !!!")
+    response = jsonify(error=str(e), path=request.path)
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    return response, 404
 
 @app.after_request
 def add_cors_headers(response):
