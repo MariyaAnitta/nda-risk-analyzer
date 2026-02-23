@@ -66,6 +66,13 @@ def resource_not_found(e):
     logger.error(f"!!! 404 ERROR: {request.method} {request.path} !!!")
     return jsonify(error=str(e), path=request.path), 404
 
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
+    return response
+
 # Configuration
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
