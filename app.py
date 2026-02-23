@@ -54,8 +54,21 @@ print(f"✅ Loaded .env from: {dotenv_path}")
 print(f"✅ File exists: {dotenv_path.exists()}")
 
 app = Flask(__name__)
-# Relaxed CORS for debugging the current issue
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Ultra-permissive CORS for production visibility
+CORS(app, resources={r"/*": {
+    "origins": "*",
+    "methods": ["GET", "POST", "OPTIONS"],
+    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
+    "expose_headers": ["Content-Type"],
+    "supports_credentials": False
+}})
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    return response
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
