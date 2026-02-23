@@ -55,7 +55,8 @@ print(f"✅ File exists: {dotenv_path.exists()}")
 
 app = Flask(__name__)
 # The MOST permissive CORS possible to eliminate it as a blocker
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+# Strict CORS configuration for Netlify
+CORS(app, resources={r"/*": {"origins": ["https://nda-risk-analyzer.netlify.app", "http://localhost:3000"]}})
 
 @app.route('/ping', methods=['GET', 'OPTIONS'])
 def ping():
@@ -67,11 +68,6 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
     return response
-
-# Explicitly handle OPTIONS for the analyze route just in case
-@app.route('/analyze', methods=['OPTIONS'])
-def analyze_options():
-    return '', 204
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -2040,8 +2036,12 @@ def index():
 
 
     
-@app.route('/analyze', methods=['POST'])
+@app.route('/analyze', methods=['POST', 'OPTIONS'])
 def analyze():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        return '', 204
+    
     try:
         # =====================================================
         # 1. FILE VALIDATION
