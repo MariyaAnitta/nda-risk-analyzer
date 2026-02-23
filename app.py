@@ -1,5 +1,21 @@
 import os
 import sys
+
+# === CRITICAL HOTFIX FOR CREWAI ===
+# Fixes 'No module named pkg_resources' on Render/Linux environments.
+# This MUST be at the very top before other imports.
+try:
+    import pkg_resources
+except ImportError:
+    from unittest.mock import MagicMock
+    mock_pkg = MagicMock()
+    mock_dist = MagicMock()
+    mock_dist.version = "0.0.0"
+    mock_pkg.get_distribution.return_value = mock_dist
+    mock_pkg.iter_entry_points.return_value = []
+    sys.modules['pkg_resources'] = mock_pkg
+# ==================================
+
 import logging
 import json
 import re
