@@ -6,12 +6,14 @@ import sys
 try:
     import pkg_resources
 except ImportError:
-    try:
-        import setuptools
-        import pkg_resources
-    except ImportError:
-        from unittest.mock import MagicMock
-        sys.modules['pkg_resources'] = MagicMock()
+    # A more complete mock to satisfy crewai's version check
+    from unittest.mock import MagicMock
+    mock_pkg = MagicMock()
+    mock_dist = MagicMock()
+    mock_dist.version = "0.0.0"
+    mock_pkg.get_distribution.return_value = mock_dist
+    mock_pkg.iter_entry_points.return_value = []
+    sys.modules['pkg_resources'] = mock_pkg
 # =====================================
 
 from flask_cors import CORS
@@ -52,18 +54,8 @@ print(f"✅ Loaded .env from: {dotenv_path}")
 print(f"✅ File exists: {dotenv_path.exists()}")
 
 app = Flask(__name__)
-CORS(app, 
-     resources={r"/*": {
-         "origins": [
-             "https://nda-risk-analyzer.netlify.app",
-             "http://localhost:5000",
-             "http://localhost:3000"  # if you use React dev server
-         ],
-         "methods": ["GET", "POST", "OPTIONS"],
-         "allow_headers": ["Content-Type", "Authorization"],
-         "expose_headers": ["Content-Type"],
-         "supports_credentials": False  # Set to False for production
-     }})
+# Relaxed CORS for debugging the current issue
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
