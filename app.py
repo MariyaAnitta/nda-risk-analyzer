@@ -1,24 +1,9 @@
 import os
 import sys
-
-# === CRITICAL HOTFIX FOR CREWAI ===
-# Fixes 'No module named pkg_resources' on Render/Linux environments.
-# This MUST be at the very top before other imports.
-try:
-    import pkg_resources
-except ImportError:
-    from unittest.mock import MagicMock
-    mock_pkg = MagicMock()
-    mock_dist = MagicMock()
-    mock_dist.version = "0.0.0"
-    mock_pkg.get_distribution.return_value = mock_dist
-    mock_pkg.iter_entry_points.return_value = []
-    sys.modules['pkg_resources'] = mock_pkg
-# ==================================
-
 import logging
 import json
 import re
+import traceback
 from typing import Dict, List, Tuple
 from pathlib import Path
 from datetime import datetime
@@ -37,11 +22,20 @@ from risk_pattern_detector import scan_risky_patterns
 from definition_analyzer import analyze_definitions
 from cross_reference_mapper import map_cross_references
 
-import logging
-from typing import Dict, List, Tuple
+# === CRITICAL HOTFIX FOR CREWAI ===
+try:
+    import pkg_resources
+except ImportError:
+    from unittest.mock import MagicMock
+    mock_pkg = MagicMock()
+    mock_dist = MagicMock()
+    mock_dist.version = "0.0.0"
+    mock_pkg.get_distribution.return_value = mock_dist
+    mock_pkg.iter_entry_points.return_value = []
+    sys.modules['pkg_resources'] = mock_pkg
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 try:
@@ -49,19 +43,18 @@ try:
 except ImportError:
     pdfplumber = None
 
-#load_dotenv()
 dotenv_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=dotenv_path)
-print(f"✅ Loaded .env from: {dotenv_path}")
-print(f"✅ File exists: {dotenv_path.exists()}")
 
 app = Flask(__name__)
 app.url_map.strict_slashes = False
-# Allow Netlify and Localhost
-CORS(app, resources={r"/*": {"origins": ["https://nda-risk-analyzer.netlify.app", "http://localhost:3000", "http://localhost:5010"]}})
+
+# Simplified Permissive CORS
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 @app.before_request
 def log_request():
+    print(f"--- INCOMING REQUEST: {request.method} {request.path} ---")
     logger.info(f"--- INCOMING REQUEST: {request.method} {request.path} ---")
 
 @app.route('/ping', methods=['GET', 'OPTIONS'])
@@ -71,17 +64,9 @@ def ping():
 @app.errorhandler(404)
 def resource_not_found(e):
     logger.error(f"!!! 404 ERROR: {request.method} {request.path} !!!")
-    response = jsonify(error=str(e), path=request.path)
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    return response, 404
+    return jsonify(error=str(e), path=request.path), 404
 
-@app.after_request
-def add_cors_headers(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
-    return response
-
+# Configuration
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'docx', 'txt'}
@@ -2051,6 +2036,7 @@ def index():
     
 @app.route('/analyze', methods=['POST', 'OPTIONS'])
 def analyze():
+    print(f"DEBUG: Entering analyze route with method: {request.method}")
     # Handle preflight OPTIONS request
     if request.method == 'OPTIONS':
         return '', 204
