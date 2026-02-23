@@ -54,21 +54,24 @@ print(f"✅ Loaded .env from: {dotenv_path}")
 print(f"✅ File exists: {dotenv_path.exists()}")
 
 app = Flask(__name__)
-# Ultra-permissive CORS for production visibility
-CORS(app, resources={r"/*": {
-    "origins": "*",
-    "methods": ["GET", "POST", "OPTIONS"],
-    "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
-    "expose_headers": ["Content-Type"],
-    "supports_credentials": False
-}})
+# The MOST permissive CORS possible to eliminate it as a blocker
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+
+@app.route('/ping', methods=['GET', 'OPTIONS'])
+def ping():
+    return jsonify({"status": "ok", "message": "Pong!"}), 200
 
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With'
     return response
+
+# Explicitly handle OPTIONS for the analyze route just in case
+@app.route('/analyze', methods=['OPTIONS'])
+def analyze_options():
+    return '', 204
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 app.config['UPLOAD_FOLDER'] = 'uploads'
