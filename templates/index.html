@@ -1695,19 +1695,24 @@ ${data.company_policy_compliance ? `
         }
 
         function newAnalysis() {
-            uploadView.style.display = 'block';
-            resultsSection.classList.remove('active');
-            resultsSection.innerHTML = '';
-            fileInput.value = '';
-            fileName.style.display = 'none';
-            criteriaTextarea.value = '';
-            charCount.textContent = '0 characters';
-            documentCategory.value = '';
-            selectedPredefinedCriteria.clear();
-            criteriaOptions.innerHTML = '';
-            predefinedCriteriaSection.style.display = 'none';
-            criteriaOptions.classList.remove('active');
-            updateSelectedCount();
+            if (typeof uploadView !== 'undefined' && uploadView) uploadView.style.display = 'block';
+            if (typeof resultsSection !== 'undefined' && resultsSection) {
+                resultsSection.classList.remove('active');
+                resultsSection.innerHTML = '';
+            }
+            if (typeof fileInput !== 'undefined' && fileInput) fileInput.value = '';
+            if (typeof fileName !== 'undefined' && fileName) fileName.style.display = 'none';
+            if (typeof criteriaTextarea !== 'undefined' && criteriaTextarea) criteriaTextarea.value = '';
+            if (typeof charCount !== 'undefined' && charCount) charCount.textContent = '0 characters';
+            if (typeof documentCategory !== 'undefined' && documentCategory) documentCategory.value = '';
+            if (typeof selectedPredefinedCriteria !== 'undefined' && selectedPredefinedCriteria) selectedPredefinedCriteria.clear();
+            if (typeof criteriaOptions !== 'undefined' && criteriaOptions) {
+                criteriaOptions.innerHTML = '';
+                criteriaOptions.classList.remove('active');
+            }
+            if (typeof predefinedCriteriaSection !== 'undefined' && predefinedCriteriaSection) predefinedCriteriaSection.style.display = 'none';
+
+            if (typeof updateSelectedCount === 'function') updateSelectedCount();
             window.scrollTo(0, 0);
         }
 
