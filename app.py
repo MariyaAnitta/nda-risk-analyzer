@@ -27,6 +27,8 @@ from flask import Flask, render_template, request, jsonify, make_response
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+import threading
+import uuid
 from crewai import Agent, Task, Crew
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_google_vertexai import ChatVertexAI
@@ -82,6 +84,8 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'docx', 'txt'}
 
+# Global Jobs Manager (In-memory)
+JOBS = {}
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -2071,197 +2075,96 @@ def analyze():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
 
-        # =====================================================
-        # 2. UNIVERSAL + CUSTOM CRITERIA HANDLING (UPDATED & DEDUPED)
-        # =====================================================
-
-        # Get edited default criteria from frontend
+        # Get criteria
         edited_default_criteria = request.form.get('default_criteria', '').strip()
-        
-        if edited_default_criteria:
-            universal_criteria = [
-                c.strip() for c in edited_default_criteria.split('\n') if c.strip()
-            ]
-            logger.info(f"Using {len(universal_criteria)} EDITED universal criteria from user")
-        else:
-            universal_criteria = load_universal_criteria()
-            logger.info(f"Using {len(universal_criteria)} DEFAULT universal criteria from JSON")
-
-        # Additional Custom Criteria
         custom_criteria_text = request.form.get('criteria', '').strip()
 
-        if custom_criteria_text:
-            custom_criteria = [
-                c.strip() for c in custom_criteria_text.split('\n') if c.strip()
-            ]
+        # Generate a Job ID
+        job_id = str(uuid.uuid4())
+        JOBS[job_id] = {
+            'status': 'queued',
+            'progress': 0,
+            'result': None,
+            'error': None,
+            'start_time': datetime.now().isoformat()
+        }
 
-            all_criteria = universal_criteria.copy()
-
-            # Remove duplicates safely (case-insensitive)
-            for custom in custom_criteria:
-                custom_norm = custom.lower().strip()
-
-                is_duplicate = any(
-                    str(u).lower().strip() == custom_norm
-                    for u in universal_criteria
-                )
-
-                if not is_duplicate:
-                    all_criteria.append(custom)
-                    logger.info(f"Added custom criteria: {custom[:50]}")
-                else:
-                    logger.info(f"Skipped duplicate custom: {custom[:50]}")
-
-            logger.info(
-                f"Total: {len(universal_criteria)} universal + "
-                f"{len(custom_criteria)} custom (deduped) = {len(all_criteria)}"
-            )
-        else:
-            all_criteria = universal_criteria
-            logger.info(f"Using ONLY {len(all_criteria)} universal criteria (no custom)")
-
-        # =====================================================
-        # 3. NORMALIZE CRITERIA
-        # =====================================================
-        normalized_criteria = []
-        for item in all_criteria:
-            if isinstance(item, dict):
-                priority = item.get("priority", "MEDIUM")
-                category = item.get("category", "General")
-                description = item.get("description", str(item))
-                normalized_criteria.append(f"[{priority}] {category}: {description}")
-            else:
-                normalized_criteria.append(str(item))
-
-        if not normalized_criteria:
-            return jsonify({'error': 'No criteria available for analysis'}), 400
-
-        # =====================================================
-        # 4. ANALYZE DOCUMENT (LLM)
-        # =====================================================
-        result = analyze_document(filepath, normalized_criteria)
-
-        final_output = (
-            result.get('_raw_output')
-            or result.get('_raw_report')
-            or result.get('_raw')
-            or result.get('analysis_text')
-            or ''
+        # Start background thread
+        thread = threading.Thread(
+            target=process_analysis_async,
+            args=(job_id, filepath, edited_default_criteria, custom_criteria_text)
         )
+        thread.daemon = True
+        thread.start()
 
-        if not final_output:
-            logger.error("DEBUG: result keys: " + ", ".join(list(result.keys())))
-
-            if isinstance(result.get('summary'), str):
-                final_output = (
-                    result.get('summary', '')
-                    + "\n\n"
-                    + result.get('recommendation', '')
-                )
-            elif 'saved_file_path' in result:
-                final_output = (
-                    f"[Raw output missing — saved JSON at {result.get('saved_file_path')}]"
-                )
-
-        # Save FULL raw LLM output
-        try:
-            with open('debug_llm_output.txt', 'w', encoding='utf-8') as f:
-                f.write(final_output)
-            logger.info("=== RAW LLM OUTPUT SAVED TO debug_llm_output.txt ===")
-        except Exception as e:
-            logger.error(f"Could not save debug_llm_output.txt: {e}")
-
-        # =====================================================
-        # 5. COUNTER-PROPOSALS VALIDATION
-        # =====================================================
-        if "COUNTER" in final_output.upper() and "PROPOSAL" in final_output.upper():
-            logger.info("✓ Counter-proposals section found")
-            start_idx = final_output.upper().find("COUNTER")
-            sample = final_output[start_idx:start_idx + 1000]
-            logger.info(f"Sample:\n{sample}")
-        else:
-            logger.error("✗ No counter-proposals section found in LLM output!")
-
-        counter_proposals = result.get('counter_proposals', [])
-        logger.info(f"Validation: {len(counter_proposals)} counter-proposals found")
-
-        if len(counter_proposals) == 0:
-            logger.error("CRITICAL: No counter-proposals generated!")
-
-            if isinstance(final_output, str) and "COUNTER-PROPOSALS" in final_output.upper():
-                logger.error("Proposals exist — parsing FAILED")
-                start_idx = final_output.upper().find("COUNTER-PROPOSALS")
-                sample = (
-                    final_output[start_idx:start_idx + 500]
-                    if start_idx != -1 else final_output[:500]
-                )
-                logger.error(f"Sample around counter-proposals:\n{sample}")
-            else:
-                logger.error("LLM did NOT generate any counter-proposals section")
-
-            result['counter_proposals'] = [{
-                "name": "Counter-Proposals Generation Failed",
-                "priority": "HIGH",
-                "current_issue": (
-                    "The AI system did not generate counter-proposals. "
-                    "Possible causes: Token limit, complex document, or parsing error."
-                ),
-                "suggested_clause": (
-                    "Please try again with a shorter document, or contact support. "
-                    "Refer to analysis_debug.log for details."
-                ),
-                "benefit": "N/A - Error condition"
-            }]
-
-        else:
-            valid_proposals = []
-            valid_count = 0
-
-            for idx, cp in enumerate(counter_proposals, 1):
-                clause = cp.get("suggested_clause", "")
-
-                if clause and clause != "[Clause not generated - regenerate report]":
-                    valid_proposals.append(cp)
-                    valid_count += 1
-                    logger.info(
-                        f"Proposal #{idx}: {cp.get('name', 'Unknown')[:50]} | {len(clause)} chars"
-                    )
-                else:
-                    logger.error(
-                        f"Proposal #{idx} '{cp.get('name', 'Unknown')}' has NO CLAUSE TEXT"
-                    )
-
-            logger.info(
-                f"FINAL VALID PROPOSALS: {valid_count}/{len(counter_proposals)}"
-            )
-
-            if valid_proposals:
-                result['counter_proposals'] = valid_proposals
-
-        # =====================================================
-        # 6. SAVE JSON REPORT
-        # =====================================================
-        try:
-            json_file_path = save_json_report(result, filepath)
-            result['saved_file_path'] = json_file_path
-            logger.info(f"Analysis complete. JSON saved at: {json_file_path}")
-        except Exception as e:
-            logger.warning(f"Could not save JSON file: {e}")
-
-        # =====================================================
-        # 7. FINAL RESPONSE
-        # =====================================================
-        logger.info(f"Sending response with {len(result.get('counter_proposals', []))} counter-proposals")
-        return jsonify(result)
+        return jsonify({'job_id': job_id, 'status': 'queued'}), 202
 
     except Exception as e:
         import traceback
-        logger.error(f"Error in analyze route: {str(e)}")
-        logger.error(traceback.format_exc())
+        logger.error(f"Error in analyze route start: {str(e)}")
         return jsonify({'error': str(e)}), 500
-    
 
+def process_analysis_async(job_id, filepath, edited_default_criteria, custom_criteria_text):
+    """Background thread to perform the long-running analysis."""
+    try:
+        JOBS[job_id]['status'] = 'running'
+        JOBS[job_id]['progress'] = 10
+
+        # 1. Handle Criteria
+        if edited_default_criteria:
+            universal_criteria = [c.strip() for c in edited_default_criteria.split('\n') if c.strip()]
+        else:
+            universal_criteria = load_universal_criteria()
+
+        if custom_criteria_text:
+            custom_criteria = [c.strip() for c in custom_criteria_text.split('\n') if c.strip()]
+            all_criteria = list(set(universal_criteria + custom_criteria)) # Basic dedupe
+        else:
+            all_criteria = universal_criteria
+        
+        JOBS[job_id]['progress'] = 20
+
+        # 2. Normalize
+        normalized_criteria = []
+        for item in all_criteria:
+            if isinstance(item, dict):
+                p = item.get("priority", "MEDIUM")
+                cat = item.get("category", "General")
+                desc = item.get("description", str(item))
+                normalized_criteria.append(f"[{p}] {cat}: {desc}")
+            else:
+                normalized_criteria.append(str(item))
+
+        JOBS[job_id]['progress'] = 30
+
+        # 3. Analyze (The slow part)
+        logger.info(f"Starting background analysis for job {job_id}")
+        result = analyze_document(filepath, normalized_criteria)
+        
+        # 4. Save result
+        JOBS[job_id]['status'] = 'completed'
+        JOBS[job_id]['progress'] = 100
+        JOBS[job_id]['result'] = result
+        logger.info(f"Background analysis completed for job {job_id}")
+
+    except Exception as e:
+        import traceback
+        error_msg = f"Analysis failed: {str(e)}"
+        logger.error(f"Job {job_id} failed: {error_msg}")
+        logger.error(traceback.format_exc())
+        JOBS[job_id]['status'] = 'failed'
+        JOBS[job_id]['error'] = error_msg
+
+@app.route('/status/<job_id>', methods=['GET'])
+def get_status(job_id):
+    """Check the status of a background job."""
+    job = JOBS.get(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'}), 404
     
+    return jsonify(job)
+
+
 @app.route('/preview-criteria', methods=['GET'])
 def preview_criteria():
     """Return universal criteria for frontend preview."""
@@ -2292,5 +2195,3 @@ def debug_last_analysis():
     
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-
-

@@ -992,19 +992,59 @@
                     throw new Error(errorData.error || `Server Error: ${resp.status} ${resp.statusText}`);
                 }
 
-                const data = await resp.json();
-                displayResults(data);
-                uploadView.style.display = 'none';
-                resultsSection.classList.add('active');
-                window.scrollTo(0, 0);
+                const initData = await resp.json();
+                const jobId = initData.job_id;
+
+                // Start Polling
+                await pollJob(jobId);
+
             } catch (err) {
                 console.error("ANALYSIS ERROR:", err);
                 showError(`<strong>Analysis Failed</strong><br>${err.message}<br><small>If this persists, please check if the backend is live.</small>`);
-            } finally {
                 analyzeBtn.disabled = false;
                 loader.classList.remove('active');
             }
         });
+
+        async function pollJob(jobId) {
+            const loaderText = document.querySelector('.loader-text');
+
+            const poll = async () => {
+                try {
+                    const resp = await fetch(`https://nda-risk-analyzer.onrender.com/status/${jobId}`);
+                    const data = await resp.json();
+
+                    if (data.status === 'completed') {
+                        displayResults(data.result);
+                        uploadView.style.display = 'none';
+                        resultsSection.classList.add('active');
+                        window.scrollTo(0, 0);
+                        analyzeBtn.disabled = false;
+                        loader.classList.remove('active');
+                        return;
+                    }
+
+                    if (data.status === 'failed') {
+                        throw new Error(data.error || 'Background analysis failed');
+                    }
+
+                    // Update loader text with progress
+                    if (loaderText) {
+                        loaderText.innerHTML = `Analyzing... ${data.progress || 0}%<br><small style="font-weight:normal;opacity:0.8">This may take 1-2 minutes. Keeping connection alive...</small>`;
+                    }
+
+                    // Poll again in 3 seconds
+                    setTimeout(poll, 3000);
+
+                } catch (err) {
+                    showError(`<strong>Polling Error</strong><br>${err.message}`);
+                    analyzeBtn.disabled = false;
+                    loader.classList.remove('active');
+                }
+            };
+
+            poll();
+        }
 
         /*******************************
          * Modal: edit the 10 industry-default criteria
